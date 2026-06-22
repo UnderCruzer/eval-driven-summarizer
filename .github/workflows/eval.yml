@@ -1,0 +1,44 @@
+name: Eval Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - "eval/**"
+      - "pipeline/**"
+      - "data/**"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run Eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m pipeline.run --version v1 --batch-size 2
+
+      - name: Check regression vs baseline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m pipeline.ci_check
+
+      - name: Upload results DB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: data/results.db
