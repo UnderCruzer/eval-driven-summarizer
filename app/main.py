@@ -221,3 +221,115 @@ async def reject_proposal(proposal_id: int):
         raise HTTPException(status_code=400, detail=f"이미 {proposal['status']} 상태입니다.")
     update_proposal_status(proposal_id, "rejected")
     return {"message": "제안 거절됨"}
+
+
+# ── 대시보드 엔드포인트 ──────────────────────────────────────────────────────
+
+def _db():
+    import sqlite3
+    from pathlib import Path as P
+    return sqlite3.connect(P("data/results.db"))
+
+
+@app.get("/dashboard/versions")
+async def dashboard_versions():
+    """버전별 평균 지표 및 등급 분포."""
+    try:
+        with _db() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT prompt_version,
+                       round(avg(total_score),3)          AS total_score,
+                       round(avg(key_point_coverage),3)   AS key_point_coverage,
+                       round(avg(faithfulness),3)         AS faithfulness,
+                       round(avg(information_loss),3)     AS information_loss,
+                       round(avg(length_adequacy),3)      AS length_adequacy,
+                       count(*)                           AS doc_count
+                FROM eval_results
+                GROUP BY prompt_version
+                ORDER BY prompt_version
+                """
+            ).fetchall()
+            averages = [dict(r) for r in rows]
+
+            grade_rows = conn.execute(
+                "SELECT prompt_version, grade, count(*) AS cnt FROM eval_results GROUP BY prompt_version, grade"
+            ).fetchall()
+            from collections import defaultdict
+            grade_dist: dict = defaultdict(dict)
+            for r in grade_rows:
+                grade_dist[r[0]][r[1]] = r[2]
+
+        return {"averages": averages, "grade_dist": dict(grade_dist)}
+    except Exception:
+        return {"averages": [], "grade_dist": {}}
+
+
+@app.get("/dashboard/failures")
+async def dashboard_failures(version: str = "", threshold: float = 3.0):
+    """실패 케이스 목록 (총점 ≤ threshold)."""
+    try:
+        with _db() as conn:
+            conn.row_factory = sqlite3.Row
+            query = "SELECT * FROM eval_results WHERE total_score <= ?"
+            params: list = [threshold]
+            if version:
+                query += " AND prompt_version = ?"
+                params.append(version)
+            query += " ORDER BY total_score ASC"
+            rows = conn.execute(query, params).fetchall()
+        results = []
+        for r in rows:
+            item = dict(r)
+            try:
+                item["reasoning"] = json.loads(item["reasoning"])
+            except Exception:
+                pass
+            results.append(item)
+        return {"results": results, "total": len(results)}
+    except Exception:
+        return {"results": [], "total": 0}
+
+
+@app.get("/dashboard/run-ids")
+async def dashboard_run_ids():
+    """트레이스용 run_id 목록."""
+    try:
+        with _db() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT run_id FROM traces ORDER BY id DESC"
+            ).fetchall()
+        return {"run_ids": [r[0] for r in rows]}
+    except Exception:
+        return {"run_ids": []}
+
+
+@app.get("/dashboard/traces")
+async def dashboard_traces(run_id: str = "", doc_id: str = ""):
+    """트레이스 목록 (run_id / doc_id 필터)."""
+    try:
+        with _db() as conn:
+            conn.row_factory = sqlite3.Row
+            query = "SELECT * FROM traces WHERE 1=1"
+            params: list = []
+            if run_id:
+                query += " AND run_id = ?"
+                params.append(run_id)
+            if doc_id:
+                query += " AND doc_id = ?"
+                params.append(doc_id)
+            query += " ORDER BY id"
+            rows = conn.execute(query, params).fetchall()
+        results = []
+        for r in rows:
+            item = dict(r)
+            for field in ("input_data", "output_data"):
+                try:
+                    item[field] = json.loads(item[field])
+                except Exception:
+                    pass
+            results.append(item)
+        return {"traces": results}
+    except Exception:
+        return {"traces": []}

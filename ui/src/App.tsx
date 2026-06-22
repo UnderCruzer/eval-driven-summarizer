@@ -4,6 +4,9 @@ import { startEval, fetchLatestProposal } from './api/client'
 import { useSSE } from './hooks/useSSE'
 import { StatusBadge } from './components/StatusBadge'
 import { ProposalCard } from './components/ProposalCard'
+import { VersionTab } from './components/dashboard/VersionTab'
+import { FailureTab } from './components/dashboard/FailureTab'
+import { TraceTab } from './components/dashboard/TraceTab'
 import './index.css'
 
 interface Progress {
@@ -19,8 +22,17 @@ interface Toast {
 }
 
 const BASE_VERSIONS = ['v1', 'v2', 'v3']
+type TabId = 'approval' | 'versions' | 'failures' | 'traces'
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'approval', label: '승인 게이트' },
+  { id: 'versions', label: '📈 버전 비교' },
+  { id: 'failures', label: '🔍 실패 케이스' },
+  { id: 'traces',   label: '🧵 트레이스' },
+]
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<TabId>('approval')
   const [version, setVersion] = useState('v1')
   const [versions, setVersions] = useState(BASE_VERSIONS)
   const [status, setStatus] = useState<EvalStatus>('idle')
@@ -83,32 +95,52 @@ export default function App() {
       </header>
 
       <main>
-        <div className="run-panel">
-          <div>
-            <label>프롬프트 버전</label>
-            <select value={version} onChange={(e) => setVersion(e.target.value)}>
-              {versions.map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            className="btn-primary"
-            disabled={status === 'running'}
-            onClick={handleRun}
-          >
-            ▶ Eval 실행
-          </button>
-          <StatusBadge status={status} progress={progress ?? undefined} />
-        </div>
+        <nav className="tab-nav">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              className={`tab-btn${activeTab === t.id ? ' tab-active' : ''}`}
+              onClick={() => setActiveTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
-        {proposal && (
-          <ProposalCard
-            proposal={proposal}
-            onDecided={showToast}
-            onNewVersion={handleNewVersion}
-          />
+        {activeTab === 'approval' && (
+          <>
+            <div className="run-panel">
+              <div>
+                <label>프롬프트 버전</label>
+                <select value={version} onChange={(e) => setVersion(e.target.value)}>
+                  {versions.map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                className="btn-primary"
+                disabled={status === 'running'}
+                onClick={handleRun}
+              >
+                ▶ Eval 실행
+              </button>
+              <StatusBadge status={status} progress={progress ?? undefined} />
+            </div>
+
+            {proposal && (
+              <ProposalCard
+                proposal={proposal}
+                onDecided={showToast}
+                onNewVersion={handleNewVersion}
+              />
+            )}
+          </>
         )}
+
+        {activeTab === 'versions' && <VersionTab />}
+        {activeTab === 'failures' && <FailureTab />}
+        {activeTab === 'traces'   && <TraceTab />}
       </main>
 
       {toast && (
