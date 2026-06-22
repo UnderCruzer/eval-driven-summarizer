@@ -44,8 +44,15 @@ pipeline/
   tracer.py         # 단계별 트레이스 수집
   trace_viewer.py   # CLI 트레이스 드릴다운 뷰어
   ci_check.py       # CI 전용 회귀 체크 (exit code)
-dashboard/
-  app.py            # Streamlit 대시보드 (버전 비교 / 실패 케이스 / 트레이스)
+app/
+  main.py           # FastAPI 서버 (Eval API + 대시보드 API + UI 서빙)
+  database.py       # 제안 저장/조회 (SQLite)
+ui/
+  src/              # React + TypeScript (Vite)
+  ├─ components/    # StatusBadge, ProposalCard, DiffView, 대시보드 탭
+  ├─ hooks/         # useSSE (EventSource 커스텀 훅)
+  ├─ api/           # fetch 래퍼
+  └─ types/         # API 응답 타입 정의
 data/
   documents/        # 테스트 문서 (뉴스, 논문, 회의록)
   ground_truth/     # 핵심 포인트 + 참조 요약
@@ -94,21 +101,25 @@ pip install -e ".[dev]"
 ## 실행 방법
 
 ```bash
-# 1. 단순 평가 실행
+# 1. 웹 UI (Human Approval Gate + 대시보드 통합)
+uvicorn app.main:app --reload
+# → http://localhost:8000
+
+# 개발 시 (React HMR)
+cd ui && npm run dev
+# → http://localhost:5173 (FastAPI 프록시 포함)
+
+# 2. CLI — 단순 평가 실행
 python -m pipeline.run --version v1
 
-# 2. 전체 개선 루프 (평가 → 분석 → 개선 제안 → 승인)
+# 3. CLI — 전체 개선 루프 (평가 → 분석 → 개선 제안 → 승인)
 python -m pipeline.loop --version v1
 
-# 3. 버전 간 회귀 비교
+# 4. 버전 간 회귀 비교
 python -c "from pipeline.regression import RegressionTracker; RegressionTracker().compare('v1', 'v2')"
 
-# 4. 트레이스 드릴다운
+# 5. 트레이스 CLI 드릴다운
 python -m pipeline.trace_viewer
-python -m pipeline.trace_viewer --run-id <run_id> --doc-id news_001
-
-# 5. 대시보드
-streamlit run dashboard/app.py
 ```
 
 ## CI

@@ -30,6 +30,44 @@ export interface StatusState {
   error?: string
 }
 
+export interface VersionAvg {
+  prompt_version: string
+  total_score: number
+  key_point_coverage: number
+  faithfulness: number
+  information_loss: number
+  length_adequacy: number
+  doc_count: number
+}
+
+export interface FailureCase {
+  id: number
+  run_id: string
+  doc_id: string
+  doc_type: string
+  prompt_version: string
+  summary: string
+  key_point_coverage: number
+  faithfulness: number
+  information_loss: number
+  length_adequacy: number
+  total_score: number
+  grade: string
+  reasoning: Record<string, string> | string
+  created_at: string
+}
+
+export interface TraceRow {
+  id: number
+  run_id: string
+  doc_id: string
+  stage: string
+  input_data: Record<string, unknown> | string
+  output_data: Record<string, unknown> | string
+  elapsed_ms: number
+  error: string | null
+}
+
 export type SSEEventType =
   | { type: 'start'; total: number; version: string; run_id: string }
   | { type: 'progress'; done: number; total: number; doc_id: string; grade: string; total_score: number }
