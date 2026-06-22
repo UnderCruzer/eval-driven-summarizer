@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eval-Driven Summarizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --surface2: #252840;
+      --border: #2e3250;
+      --text: #e2e8f0;
+      --text-muted: #8892a4;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 24px;
+    }
+
+    header {
+      max-width: 1100px;
+      margin: 0 auto 32px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .main { max-width: 1100px; margin: 0 auto; }
+
+    /* ── 실행 패널 ── */
+    .run-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .run-panel label { font-size: 14px; color: var(--text-muted); }
+
+    select, input[type=text] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    select:focus, input[type=text]:focus { border-color: var(--accent); }
+
+    button {
+      padding: 9px 20px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-approve { background: var(--green); color: #fff; }
+    .btn-approve:hover { background: #16a34a; }
+
+    .btn-reject { background: transparent; color: var(--red); border: 1px solid var(--red); }
+    .btn-reject:hover { background: rgba(239,68,68,0.1); }
+
+    /* ── 상태 배지 ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-running { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .badge-done    { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .badge-idle    { background: rgba(99,102,241,0.15); color: var(--accent); }
+    .badge-error   { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .dot-pulse { animation: pulse 1.2s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ── 제안 카드 ── */
+    .proposal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .proposal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .version-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .arrow { color: var(--text-muted); }
+
+    .score-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .score-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 13px;
+    }
+
+    .score-chip span { color: var(--accent); font-weight: 700; }
+
+    /* ── 근거 ── */
+    .rationale {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+
+    .rationale strong { color: var(--text); }
+
+    /* ── 실패 패턴 ── */
+    .patterns {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .patterns h3 { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .pattern-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .pattern-item:last-child { border-bottom: none; }
+
+    .pattern-cat {
+      background: rgba(99,102,241,0.15);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .pattern-hint { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+
+    /* ── diff 뷰 ── */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    @media (max-width: 700px) {
+      .diff-grid { grid-template-columns: 1fr; }
+    }
+
+    .diff-col { padding: 20px 24px; }
+    .diff-col:first-child { border-right: 1px solid var(--border); }
+
+    .diff-col h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .diff-col h3 .tag {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .tag-current { background: rgba(139,92,246,0.2); color: #a78bfa; }
+    .tag-new     { background: rgba(34,197,94,0.2);  color: var(--green); }
+
+    .diff-col h4 {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 14px 0 6px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 10px 12px;
+      resize: vertical;
+      font-family: inherit;
+      outline: none;
+      min-height: 80px;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+    textarea[readonly] { opacity: 0.6; cursor: default; }
+
+    /* ── 액션 바 ── */
+    .action-bar {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .edit-hint { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+
+    /* ── 토스트 ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    #toast.show { opacity: 1; }
+    #toast.success { background: var(--green); color: #fff; }
+    #toast.error   { background: var(--red);   color: #fff; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Eval-Driven Summarizer</h1>
+  <p>에이전트가 요약을 평가하고 개선안을 제안합니다. 사람이 검토 후 승인하세요.</p>
+</header>
+
+<div class="main">
+
+  <!-- 실행 패널 -->
+  <div class="run-panel">
+    <div>
+      <label>프롬프트 버전</label><br/>
+      <select id="versionSelect" style="margin-top:6px;">
+        <option value="v1">v1</option>
+        <option value="v2">v2</option>
+        <option value="v3">v3</option>
+      </select>
+    </div>
+    <div style="padding-top:22px;">
+      <button class="btn-primary" id="runBtn" onclick="startEval()">▶ Eval 실행</button>
+    </div>
+    <div id="statusBadge" style="padding-top:22px;"></div>
+  </div>
+
+  <!-- 제안 카드 -->
+  <div class="proposal-card hidden" id="proposalCard">
+
+    <div class="proposal-header">
+      <div class="version-badge">
+        <span id="baseVersion" style="color:var(--text-muted)"></span>
+        <span class="arrow">→</span>
+        <span id="newVersion" style="color:var(--green)"></span>
+      </div>
+      <div class="score-row">
+        <div class="score-chip">평균 점수 <span id="avgScore"></span></div>
+        <div class="score-chip">취약 지표 <span id="weakMetric"></span></div>
+      </div>
+    </div>
+
+    <div class="rationale">
+      <strong>개선 근거</strong><br/>
+      <span id="rationale"></span>
+    </div>
+
+    <div class="patterns" id="patternsSection">
+      <h3>실패 패턴</h3>
+      <div id="patternsList"></div>
+    </div>
+
+    <div class="diff-grid">
+      <div class="diff-col">
+        <h3>현재 프롬프트 <span class="tag tag-current" id="baseTag"></span></h3>
+        <h4>System Prompt</h4>
+        <textarea id="currentSystem" readonly rows="4"></textarea>
+        <h4>User Template</h4>
+        <textarea id="currentUser" readonly rows="6"></textarea>
+      </div>
+      <div class="diff-col">
+        <h3>제안 프롬프트 <span class="tag tag-new" id="newTag"></span></h3>
+        <h4>System Prompt <small style="color:var(--text-muted);font-weight:400;">(수정 가능)</small></h4>
+        <textarea id="newSystem" rows="4"></textarea>
+        <h4>User Template <small style="color:var(--text-muted);font-weight:400;">(수정 가능)</small></h4>
+        <textarea id="newUser" rows="6"></textarea>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn-approve" id="approveBtn" onclick="decide('approve')">✓ 승인</button>
+      <button class="btn-reject" id="rejectBtn" onclick="decide('reject')">✕ 거절</button>
+      <span class="edit-hint">오른쪽 프롬프트를 직접 수정한 뒤 승인할 수 있습니다.</span>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const API = '';
+  let currentProposalId = null;
+  let pollTimer = null;
+
+  function setStatus(status) {
+    const el = document.getElementById('statusBadge');
+    const map = {
+      idle:    ['idle',    '대기 중'],
+      running: ['running', 'Eval 실행 중'],
+      done:    ['done',    '완료'],
+      error:   ['error',   '오류'],
+    };
+    const [cls, label] = map[status] || ['idle', status];
+    el.innerHTML = `<span class="badge badge-${cls}"><span class="dot${cls==='running'?' dot-pulse':''}"></span>${label}</span>`;
+  }
+
+  async function startEval() {
+    const version = document.getElementById('versionSelect').value;
+    document.getElementById('runBtn').disabled = true;
+    document.getElementById('proposalCard').classList.add('hidden');
+    setStatus('running');
+
+    const res = await fetch(`${API}/eval/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.detail || '실행 실패', 'error');
+      setStatus('error');
+      document.getElementById('runBtn').disabled = false;
+      return;
+    }
+
+    pollTimer = setInterval(pollStatus, 2000);
+  }
+
+  async function pollStatus() {
+    const res = await fetch(`${API}/eval/status`);
+    const data = await res.json();
+    const status = data.status || 'idle';
+    setStatus(status);
+
+    if (status === 'done') {
+      clearInterval(pollTimer);
+      document.getElementById('runBtn').disabled = false;
+      await loadProposal();
+    } else if (status === 'error') {
+      clearInterval(pollTimer);
+      document.getElementById('runBtn').disabled = false;
+      showToast('Eval 실행 오류: ' + (data.error || ''), 'error');
+    }
+  }
+
+  async function loadProposal() {
+    const res = await fetch(`${API}/proposals/latest`);
+    if (!res.ok) return;
+    const p = await res.json();
+    currentProposalId = p.id;
+
+    document.getElementById('baseVersion').textContent = p.base_version;
+    document.getElementById('newVersion').textContent  = p.new_version;
+    document.getElementById('baseTag').textContent     = p.base_version;
+    document.getElementById('newTag').textContent      = p.new_version;
+    document.getElementById('avgScore').textContent    = `${p.avg_score} / 5.0`;
+    document.getElementById('weakMetric').textContent  = p.weak_metric;
+    document.getElementById('rationale').textContent   = p.rationale;
+
+    // 현재 프롬프트 (prompts.py에서 로드 불가하므로 base placeholder)
+    document.getElementById('currentSystem').value = '(현재 적용 중인 버전의 system prompt)';
+    document.getElementById('currentUser').value   = '(현재 적용 중인 버전의 user template)';
+
+    document.getElementById('newSystem').value = p.new_system_prompt;
+    document.getElementById('newUser').value   = p.new_user_template;
+
+    // 실패 패턴
+    const list = document.getElementById('patternsList');
+    list.innerHTML = '';
+    (p.patterns || []).forEach(pt => {
+      list.innerHTML += `
+        <div class="pattern-item">
+          <span class="pattern-cat">${pt.category}</span>
+          <div>
+            <div>${pt.description} — <strong>${pt.frequency}건</strong></div>
+            <div class="pattern-hint">${pt.improvement_hint}</div>
+          </div>
+        </div>`;
+    });
+
+    const status = p.status;
+    const decided = status !== 'pending';
+    document.getElementById('approveBtn').disabled = decided;
+    document.getElementById('rejectBtn').disabled  = decided;
+
+    if (decided) {
+      showToast(`이미 ${status === 'approved' ? '승인됨' : '거절됨'}`, 'error');
+    }
+
+    document.getElementById('proposalCard').classList.remove('hidden');
+  }
+
+  async function decide(action) {
+    if (!currentProposalId) return;
+
+    const body = action === 'approve'
+      ? {
+          edited_system_prompt: document.getElementById('newSystem').value,
+          edited_user_template: document.getElementById('newUser').value,
+        }
+      : {};
+
+    const res = await fetch(`${API}/proposals/${currentProposalId}/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast(data.message, 'success');
+      document.getElementById('approveBtn').disabled = true;
+      document.getElementById('rejectBtn').disabled  = true;
+      if (action === 'approve' && data.new_version) {
+        const sel = document.getElementById('versionSelect');
+        const opt = document.createElement('option');
+        opt.value = data.new_version;
+        opt.textContent = data.new_version;
+        sel.appendChild(opt);
+      }
+    } else {
+      showToast(data.detail || '오류 발생', 'error');
+    }
+  }
+
+  function showToast(msg, type='success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    setTimeout(() => el.className = '', 2800);
+  }
+
+  // 초기 상태
+  setStatus('idle');
+</script>
+</body>
+</html>
