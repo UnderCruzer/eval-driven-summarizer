@@ -109,13 +109,16 @@ def _write_to_prompts(proposal: ImproveProposal) -> None:
     prompts_path = Path("agent/prompts.py")
     content = prompts_path.read_text(encoding="utf-8")
 
-    system_escaped = proposal.new_system_prompt.replace('"', '\\"')
-    user_escaped = proposal.new_user_template.replace('"', '\\"')
+    def escape(text: str) -> str:
+        return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+    system_lines = escape(proposal.new_system_prompt)
+    user_lines = escape(proposal.new_user_template)
 
     new_entry = (
         f'    "{proposal.new_version}": (\n'
-        f'        "{system_escaped}",\n'
-        f'        "{user_escaped}",\n'
+        f'        "{system_lines}",\n'
+        f'        "{user_lines}",\n'
         f'    ),\n'
         f'}}\n'
     )
