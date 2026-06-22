@@ -54,7 +54,7 @@ data/
 
 ## 개선 루프 실행 결과
 
-실제로 `python -m pipeline.loop` 를 v1부터 순차 실행한 결과예요.
+실제로 `python -m pipeline.loop` 를 v1부터 순차 실행한 결과입니다.
 
 | 버전 | 평균 점수 | coverage | faithfulness | info_loss | length | 주요 변경 |
 |------|-----------|----------|--------------|-----------|--------|-----------|
