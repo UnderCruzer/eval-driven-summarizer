@@ -1,0 +1,264 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d2e;
+  --surface2: #252840;
+  --border: #2e3250;
+  --text: #e2e8f0;
+  --text-muted: #8892a4;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --radius: 10px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 32px 24px;
+}
+
+header {
+  max-width: 1100px;
+  margin: 0 auto 32px;
+}
+
+header h1 { font-size: 22px; font-weight: 700; }
+header p  { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+
+main { max-width: 1100px; margin: 0 auto; }
+
+/* ── run panel ── */
+.run-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.run-panel label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+select:focus { border-color: var(--accent); }
+
+/* ── buttons ── */
+button {
+  padding: 9px 20px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-approve { background: var(--green); color: #fff; }
+.btn-approve:hover:not(:disabled) { background: #16a34a; }
+.btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-reject { background: transparent; color: var(--red); border: 1px solid var(--red); }
+.btn-reject:hover:not(:disabled) { background: rgba(239,68,68,0.1); }
+.btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-running { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.badge-done    { background: rgba(34,197,94,0.15);  color: var(--green); }
+.badge-idle    { background: rgba(99,102,241,0.15); color: var(--accent); }
+.badge-error   { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.dot-pulse { animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── proposal card ── */
+.proposal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.proposal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.version-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.arrow { color: var(--text-muted); }
+
+.score-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.score-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+.score-chip span { color: var(--accent); font-weight: 700; }
+
+/* ── rationale ── */
+.rationale {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.rationale strong { color: var(--text); }
+
+/* ── patterns ── */
+.patterns {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.patterns h3 {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pattern-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.pattern-item:last-child { border-bottom: none; }
+.pattern-cat {
+  background: rgba(99,102,241,0.15);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pattern-hint { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+
+/* ── diff grid ── */
+.diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+@media (max-width: 700px) { .diff-grid { grid-template-columns: 1fr; } }
+
+.diff-col { padding: 20px 24px; }
+.diff-col:first-child { border-right: 1px solid var(--border); }
+
+.diff-col h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.diff-col h4 {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 14px 0 6px;
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.tag-current { background: rgba(139,92,246,0.2); color: #a78bfa; }
+.tag-new      { background: rgba(34,197,94,0.2);  color: var(--green); }
+
+textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+  min-height: 80px;
+}
+textarea:focus { border-color: var(--accent); }
+textarea[readonly] { opacity: 0.6; cursor: default; }
+
+/* ── action bar ── */
+.action-bar {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.edit-hint { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+
+/* ── toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+.toast-success { background: var(--green); color: #fff; }
+.toast-error   { background: var(--red);   color: #fff; }
+
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }

@@ -114,6 +114,7 @@ async def run_eval(
     prompt_version: str = "v1",
     doc_type: Optional[str] = None,
     batch_size: int = 3,
+    on_progress=None,
 ) -> list[EvalResult]:
     init_db()
     run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -125,19 +126,36 @@ async def run_eval(
 
     console.print(f"\n[bold cyan]Eval Run[/] — version=[yellow]{prompt_version}[/] docs=[green]{len(cases)}[/]\n")
 
+    if on_progress:
+        await on_progress({"type": "start", "total": len(cases), "version": prompt_version, "run_id": run_id})
+
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
-        tasks = [
+        task_coroutines = [
             _evaluate_one(case, summarizer, judge, run_id, semaphore)
             for case in cases
         ]
-        task_id = progress.add_task("평가 중...", total=len(tasks))
+        task_id = progress.add_task("평가 중...", total=len(task_coroutines))
         results = []
-        for coro in asyncio.as_completed(tasks):
+        done_count = 0
+        for coro in asyncio.as_completed(task_coroutines):
             result = await coro
             results.append(result)
+            done_count += 1
             progress.advance(task_id)
+            if on_progress:
+                await on_progress({
+                    "type": "progress",
+                    "done": done_count,
+                    "total": len(cases),
+                    "doc_id": result.doc_id,
+                    "grade": result.grade,
+                    "total_score": result.total_score,
+                })
 
     _print_summary(results, run_id)
+    if on_progress:
+        avg = sum(r.total_score for r in results) / len(results)
+        await on_progress({"type": "done", "avg_score": round(avg, 2), "run_id": run_id})
     return results
 
 

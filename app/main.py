@@ -2,11 +2,12 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncGenerator
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -39,13 +40,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 정적 파일 (UI)
 static_path = Path(__file__).parent / "static"
 static_path.mkdir(exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_path), name="static")
 
-# 실행 중인 작업 상태 (in-memory)
-_running: dict[str, str] = {}
+_running: dict = {}
+_sse_queues: list[asyncio.Queue] = []
+
+
+def _broadcast(event: dict) -> None:
+    data = json.dumps(event, ensure_ascii=False)
+    for q in list(_sse_queues):
+        q.put_nowait(data)
+
+
+async def _progress_callback(event: dict) -> None:
+    _broadcast(event)
+    if event.get("type") == "start":
+        _running["total"] = event.get("total", 0)
+        _running["done"] = 0
+    elif event.get("type") == "progress":
+        _running["done"] = event.get("done", 0)
+    elif event.get("type") == "done":
+        _running["status"] = "done"
 
 
 # ── 스키마 ──────────────────────────────────────────────────────────────────
@@ -67,6 +83,8 @@ async def root():
     html = (static_path / "index.html").read_text(encoding="utf-8")
     return HTMLResponse(content=html)
 
+app.mount("/assets", StaticFiles(directory=static_path / "assets"), name="assets")
+
 
 @app.post("/eval/run")
 async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
@@ -78,12 +96,15 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
 
     async def _run():
         try:
-            results = await run_eval(prompt_version=req.version, doc_type=req.doc_type)
+            results = await run_eval(
+                prompt_version=req.version,
+                doc_type=req.doc_type,
+                on_progress=_progress_callback,
+            )
             if not results:
                 _running["status"] = "idle"
                 return
 
-            # 최근 run_id 조회
             import sqlite3
             from pathlib import Path as P
             with sqlite3.connect(P("data/results.db")) as conn:
@@ -92,7 +113,6 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
                 ).fetchone()
             run_id = row[0]
 
-            # 실패 분석 + 개선 제안 생성
             analyzer = FailureAnalyzer()
             report = analyzer.analyze(run_id)
 
@@ -123,9 +143,38 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
         except Exception as e:
             _running["status"] = "error"
             _running["error"] = str(e)
+            _broadcast({"type": "error", "message": str(e)})
 
     background_tasks.add_task(_run)
-    return {"message": f"Eval v{req.version} 시작됨", "status": "running"}
+    return {"message": f"Eval {req.version} 시작됨", "status": "running"}
+
+
+@app.get("/eval/stream")
+async def eval_stream():
+    """SSE — Eval 진행 상황 실시간 스트리밍."""
+    queue: asyncio.Queue = asyncio.Queue()
+    _sse_queues.append(queue)
+
+    async def generator() -> AsyncGenerator[str, None]:
+        try:
+            yield f"data: {json.dumps(_running or {'status': 'idle'})}\n\n"
+            while True:
+                try:
+                    data = await asyncio.wait_for(queue.get(), timeout=30)
+                    yield f"data: {data}\n\n"
+                    event = json.loads(data)
+                    if event.get("type") in ("done", "error"):
+                        break
+                except asyncio.TimeoutError:
+                    yield ": heartbeat\n\n"
+        finally:
+            _sse_queues.remove(queue)
+
+    return StreamingResponse(
+        generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/eval/status")
