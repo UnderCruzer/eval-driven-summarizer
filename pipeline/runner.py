@@ -14,12 +14,14 @@ from agent.summarizer import SummarizerAgent
 from data.loader import TestCase, load_test_cases
 from eval.judge import JudgeAgent
 from eval.metrics import EvalResult
+from pipeline.tracer import init_trace_db, trace
 
 console = Console()
 DB_PATH = Path("data/results.db")
 
 
 def init_db() -> None:
+    init_trace_db()
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
@@ -81,22 +83,29 @@ async def _evaluate_one(
     async with semaphore:
         loop = asyncio.get_event_loop()
 
-        output = await loop.run_in_executor(
-            None,
-            lambda: summarizer.summarize(case.doc_id, case.doc_type, case.content),
-        )
-        result = await loop.run_in_executor(
-            None,
-            lambda: judge.evaluate(
-                doc_id=case.doc_id,
-                doc_type=case.doc_type,
-                content=case.content,
-                summary=output.summary,
-                prompt_version=output.prompt_version,
-                key_points=case.key_points,
-                reference_summary=case.reference_summary,
-            ),
-        )
+        with trace(run_id, case.doc_id, "summarize", {"doc_type": case.doc_type, "content_len": len(case.content)}) as t_sum:
+            output = await loop.run_in_executor(
+                None,
+                lambda: summarizer.summarize(case.doc_id, case.doc_type, case.content),
+            )
+            t_sum["summary"] = output.summary
+            t_sum["prompt_version"] = output.prompt_version
+
+        with trace(run_id, case.doc_id, "judge", {"prompt_version": output.prompt_version, "summary_len": len(output.summary)}) as t_judge:
+            result = await loop.run_in_executor(
+                None,
+                lambda: judge.evaluate(
+                    doc_id=case.doc_id,
+                    doc_type=case.doc_type,
+                    content=case.content,
+                    summary=output.summary,
+                    prompt_version=output.prompt_version,
+                    key_points=case.key_points,
+                    reference_summary=case.reference_summary,
+                ),
+            )
+            t_judge["total_score"] = result.total_score
+            t_judge["grade"] = result.grade
         save_result(run_id, case.doc_type, result)
         return result
 
