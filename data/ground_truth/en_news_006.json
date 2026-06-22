@@ -1,0 +1,13 @@
+{
+  "doc_id": "en_news_006",
+  "doc_type": "en_news",
+  "key_points": [
+    "91% of surveyed citizens believe fairness should be prioritised over economic gain in AI development",
+    "The 'Let's Talk AI' campaign runs deliberative workshops to include public voices in AI governance",
+    "Pope Francis has called for AI development to centre human dignity and the common good",
+    "Workshop participants consistently rated transparency, accountability, and human oversight above speed",
+    "Researcher Dr Sarah Mitchell argues governments must create formal public input mechanisms for AI regulation"
+  ],
+  "reference_summary": "A University of Sheffield researcher's 'Let's Talk AI' campaign is bringing public deliberation into AI governance, with 91% of participants saying fairness should take precedence over economic gain. The initiative, aligned with Pope Francis's calls for human-centred AI, argues governments need formal mechanisms for citizen input rather than relying on industry self-regulation.",
+  "ideal_length_chars": [150, 350]
+}

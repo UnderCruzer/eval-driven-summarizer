@@ -1,0 +1,11 @@
+Tech firms face tougher UK rules on intimate image abuse
+
+Social media platforms, messaging services, and online forums that publish intimate image abuse are being instructed to follow new guidelines to stop it spreading. UK regulator Ofcom said it would change its codes of practice to force service providers to detect and remove intimate image abuse — sometimes called "revenge porn" — and crack down on AI-generated deepfakes.
+
+The move follows a threatened legal challenge against the regulator by the campaign group End Violence Against Women (EVAW), whose lawyers complained Ofcom was "failing to tackle these sites and failing in its obligations to protect women and girls." Ofcom warned that such images were increasing in prevalence, with generative AI making things worse, and said there was an "urgent need to reduce the spread of intimate image abuse online."
+
+A wave of deepfakes emerged earlier this year when Elon Musk's Grok AI was widely used to create sexualised videos of women. Prime Minister Keir Starmer said deepfake nudes and revenge porn must be removed within 48 hours or technology firms risked being blocked in the UK, calling it a "national emergency."
+
+Ofcom is urging sites to use "hash-matching" technology, which detects violating intimate images and automatically stops them from being circulated further. The new code is expected to come into force in the autumn, subject to parliamentary process.
+
+Campaigners welcomed the move but said the regulator should go further and mandate the use of blocking technology rather than merely recommending it. "This is a recommendation rather than the concrete enforcement action that is needed," said Claire Powell, a lawyer representing a survivor of intimate image abuse. "These forums are already consistently in breach of the Online Safety Act, but this won't shut them down."

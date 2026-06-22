@@ -22,6 +22,13 @@ interface Toast {
 }
 
 const BASE_VERSIONS = ['v1', 'v2', 'v3']
+const DOC_TYPES = [
+  { value: '', label: '전체' },
+  { value: 'news', label: '뉴스 (한국어)' },
+  { value: 'paper', label: '논문 (한국어)' },
+  { value: 'meeting', label: '회의록 (한국어)' },
+  { value: 'en_news', label: 'News (English)' },
+]
 type TabId = 'approval' | 'versions' | 'failures' | 'traces'
 
 const TABS: { id: TabId; label: string }[] = [
@@ -35,6 +42,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('approval')
   const [version, setVersion] = useState('v1')
   const [versions, setVersions] = useState(BASE_VERSIONS)
+  const [docType, setDocType] = useState('')
   const [status, setStatus] = useState<EvalStatus>('idle')
   const [progress, setProgress] = useState<Progress | null>(null)
   const [proposal, setProposal] = useState<Proposal | null>(null)
@@ -74,7 +82,7 @@ export default function App() {
     setProposal(null)
     setSseEnabled(true)
     try {
-      await startEval(version)
+      await startEval(version, docType || undefined)
     } catch (e) {
       setStatus('error')
       setSseEnabled(false)
@@ -115,6 +123,14 @@ export default function App() {
                 <select value={version} onChange={(e) => setVersion(e.target.value)}>
                   {versions.map((v) => (
                     <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>문서 유형</label>
+                <select value={docType} onChange={(e) => setDocType(e.target.value)}>
+                  {DOC_TYPES.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
                   ))}
                 </select>
               </div>

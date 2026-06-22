@@ -1,0 +1,13 @@
+{
+  "doc_id": "en_news_005",
+  "doc_type": "en_news",
+  "key_points": [
+    "Ofcom updated its codes of practice to require platforms to detect and remove intimate image abuse",
+    "The rules cover AI-generated deepfakes as well as non-consensual real images",
+    "PM Keir Starmer declared intimate image abuse a 'national emergency' requiring 48-hour takedown",
+    "Ofcom recommends hash-matching technology to automatically block known violating images",
+    "Campaigners say the new code is only a recommendation, not binding enforcement with real consequences"
+  ],
+  "reference_summary": "UK regulator Ofcom has updated its codes of practice to require platforms to detect and remove intimate image abuse and AI-generated deepfakes, following pressure from campaigners and PM Starmer's 'national emergency' declaration. However, critics warn the new rules rely on recommendations rather than binding enforcement, leaving platforms without strong legal compulsion.",
+  "ideal_length_chars": [150, 350]
+}

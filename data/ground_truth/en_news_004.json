@@ -1,0 +1,13 @@
+{
+  "doc_id": "en_news_004",
+  "doc_type": "en_news",
+  "key_points": [
+    "The US State Department issued visa bans on five Europeans, including former EU Commissioner Thierry Breton",
+    "Secretary of State Rubio accused them of coercing American platforms to censor US viewpoints",
+    "The move is part of the Trump administration's campaign against the EU's Digital Services Act (DSA)",
+    "Targets include leaders of anti-hate-speech groups: CCDH, HateAid, and Global Disinformation Index",
+    "The visa ban uses immigration law rather than direct platform regulations or sanctions"
+  ],
+  "reference_summary": "The US State Department banned five Europeans, including former EU Commissioner Thierry Breton, from entering the US, accusing them of pressuring tech platforms to censor American speech. The move escalates the Trump administration's campaign against the EU's Digital Services Act and uses immigration law to target foreign regulators and anti-disinformation activists.",
+  "ideal_length_chars": [150, 350]
+}

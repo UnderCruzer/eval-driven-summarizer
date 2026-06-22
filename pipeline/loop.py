@@ -18,11 +18,11 @@ from pipeline.runner import run_eval
 console = Console()
 
 
-async def main(version: str) -> None:
+async def main(version: str, doc_type=None) -> None:
     console.rule(f"[bold cyan]Improvement Loop — {version}[/]")
 
     # 1. 평가 실행
-    results = await run_eval(prompt_version=version)
+    results = await run_eval(prompt_version=version, doc_type=doc_type)
     if not results:
         console.print("[red]평가 결과 없음[/]")
         return
@@ -62,5 +62,6 @@ def _extract_run_id(results) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--version", default="v1")
+    parser.add_argument("--doc-type", default=None)
     args = parser.parse_args()
-    asyncio.run(main(args.version))
+    asyncio.run(main(args.version, doc_type=args.doc_type))

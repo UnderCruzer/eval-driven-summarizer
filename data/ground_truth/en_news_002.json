@@ -1,0 +1,13 @@
+{
+  "doc_id": "en_news_002",
+  "doc_type": "en_news",
+  "key_points": [
+    "Elon Musk's xAI filed a federal lawsuit challenging Colorado's AI regulation law",
+    "xAI argues the law violates the First Amendment by compelling AI companies to alter model outputs",
+    "Colorado was the first US state to pass broad AI regulatory measures targeting algorithmic discrimination",
+    "The law requires impact assessments and user appeal rights in high-risk AI decisions (hiring, lending, admissions)",
+    "The case could set a precedent for First Amendment defences against AI anti-discrimination laws"
+  ],
+  "reference_summary": "Elon Musk's xAI sued Colorado over its landmark AI regulation law, arguing it violates the First Amendment by forcing companies to alter model outputs to meet anti-discrimination standards. Colorado was the first state to pass such broad AI rules, requiring impact assessments and appeal rights in hiring, lending, and school admissions decisions.",
+  "ideal_length_chars": [150, 350]
+}

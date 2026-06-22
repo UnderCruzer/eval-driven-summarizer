@@ -1,0 +1,13 @@
+{
+  "doc_id": "en_news_001",
+  "doc_type": "en_news",
+  "key_points": [
+    "UK Technology Secretary Liz Kendall admitted AI will eliminate certain jobs, especially in law and finance",
+    "Government plans to train 10 million workers in basic AI skills by 2030",
+    "UK aims to become the fastest AI-adopting nation in the G7",
+    "Trade unions and Labour MPs criticised the retraining plan as too slow relative to AI displacement pace",
+    "A £1.2bn investment package was announced to support workforce transition programmes"
+  ],
+  "reference_summary": "UK Technology Secretary Liz Kendall admitted AI will cost jobs in sectors like law and finance, while pledging to retrain 10 million workers by 2030 and make Britain the G7's fastest AI adopter. Trade unions criticised the plan as too slow, and the government backed the transition with a £1.2bn investment package.",
+  "ideal_length_chars": [150, 350]
+}

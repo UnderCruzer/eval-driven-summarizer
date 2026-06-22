@@ -1,0 +1,13 @@
+How big tech got its way on Trump's AI executive order
+
+Only hours before Donald Trump was set to sign a long-awaited executive order that would have called for a government safety review of new artificial intelligence models before their release, the president abruptly backed out. Despite growing public backlash to the technology and experts warning new models will pose critical security risks, Trump vowed the US government would not slow down the AI race.
+
+During a meeting with reporters, Trump cited both American dominance and competition with China as his reasoning behind the reversal. "I didn't like certain aspects of it, I postponed it," Trump said. "We're leading China, we're leaving everybody, and I don't want to do anything that's gonna get in the way of that lead."
+
+Trump's postponing of the order was a victory for tech leaders who have long opposed AI regulation and spent millions lobbying against it. Tech billionaires including Elon Musk, Mark Zuckerberg, and former White House "AI czar" David Sacks personally urged Trump to reverse course in private phone calls.
+
+White House discussions around the order began after Anthropic announced its latest model, Claude Mythos, but declared it would hold off on publicly releasing it due to safety concerns — calling the model's ability to find vulnerabilities in computer code a "reckoning" for the cybersecurity industry. Mythos sparked a small geopolitical crisis, with governments from the UK to India to China worrying the AI model could target financial systems and critical infrastructure.
+
+Soon after discussions began, companies including Microsoft and Google struck a deal to allow the government's AI standards agency to review early versions of their models on national security grounds, but only on a non-binding, voluntary basis. Sacks told Trump this week that the order would benefit China in the AI race, while Musk and Zuckerberg warned the president the order would hurt the economy and US advantage in AI.
+
+The prospect of the Trump administration creating any stringent AI regulations now appears extremely unlikely, as tech leaders maintain significant influence over the administration and continue pouring money into political campaigns ahead of midterm elections.

@@ -1,0 +1,11 @@
+Meeting the pope's call to put humanity first in a world of artificial intelligence
+
+A University of Sheffield researcher has advocated for greater public participation in AI policy discussions, noting that surveys show "91% believe fairness should be prioritised over economic gain" when developing AI systems. The "Let's Talk AI" campaign engages communities directly rather than allowing tech industry voices to dominate the conversation about how artificial intelligence should develop.
+
+Pope Francis has repeatedly called for AI development to centre human dignity and the common good, urging policymakers to ensure that the technology serves humanity rather than concentrating power in the hands of a few corporations or states. His calls have resonated with a growing movement of researchers and civil society groups pushing back against a development model driven primarily by profit.
+
+The researcher behind Let's Talk AI, Dr Sarah Mitchell, argues that public deliberation on AI governance is not just desirable but necessary. "We are making decisions now that will shape what AI does for decades," she said. "The people most affected by these decisions — workers, patients, students — need to be part of the conversation, not just consulted after the fact."
+
+The campaign has held deliberative workshops in cities across the UK, including Sheffield, Manchester, and Bristol, bringing together citizens from diverse backgrounds to discuss issues such as AI use in hiring, healthcare diagnostics, and criminal sentencing. Participants have consistently rated transparency, accountability, and human oversight as more important than speed or efficiency.
+
+The findings echo similar public engagement exercises in Germany, Canada, and South Korea, where citizens have expressed scepticism about the dominant industry-led framing of AI as an unambiguous economic opportunity. Mitchell argues that governments must create formal mechanisms for public input into AI regulation, rather than relying on industry self-regulation or opaque expert panels.

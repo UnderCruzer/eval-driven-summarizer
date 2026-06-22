@@ -1,0 +1,13 @@
+{
+  "doc_id": "en_news_003",
+  "doc_type": "en_news",
+  "key_points": [
+    "Trump cancelled a planned AI safety executive order hours before signing, citing concern over US lead vs China",
+    "Tech billionaires Musk, Zuckerberg, and Sacks lobbied Trump directly to kill the order",
+    "The order would have created a voluntary government review process for new AI models — with no legal enforcement",
+    "Discussions began after Anthropic's Claude Mythos model raised serious cybersecurity concerns",
+    "Prospects for any meaningful AI regulation under the Trump administration are now extremely unlikely"
+  ],
+  "reference_summary": "Trump abruptly cancelled a planned AI safety executive order after Elon Musk, Mark Zuckerberg, and David Sacks lobbied him directly, arguing it would cede ground to China. The scrapped order would have created a non-binding voluntary review for AI models, and the episode signals the administration has no appetite for AI regulation despite growing security concerns.",
+  "ideal_length_chars": [150, 350]
+}
