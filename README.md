@@ -67,6 +67,18 @@ Prompt Improver가 길이 기준을 점진적으로 구체화 → v1(4.93) → v
 
 > 모든 문서(뉴스 2건, 논문 2건, 회의록 2건)에서 v2 기준 전 항목 A등급 달성
 
+### v1
+
+![v1 결과](docs/images/loop_v1.png)
+
+### v2
+
+![v2 결과](docs/images/loop_v2.png)
+
+### v3
+
+![v3 결과](docs/images/loop_v3.png)
+
 ## 시작하기
 
 ```bash
