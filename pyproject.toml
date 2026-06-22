@@ -1,3 +1,7 @@
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent*", "eval*", "pipeline*", "dashboard*", "data*"]
+
 [project]
 name = "eval-driven-summarizer"
 version = "0.1.0"
