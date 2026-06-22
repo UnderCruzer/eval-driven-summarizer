@@ -2,11 +2,12 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncGenerator
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -46,6 +47,26 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 # 실행 중인 작업 상태 (in-memory)
 _running: dict[str, str] = {}
+# SSE 구독자 큐 목록
+_sse_queues: list[asyncio.Queue] = []
+
+
+def _broadcast(event: dict) -> None:
+    """실행 중인 모든 SSE 구독자에게 이벤트를 전송한다."""
+    data = json.dumps(event, ensure_ascii=False)
+    for q in list(_sse_queues):
+        q.put_nowait(data)
+
+
+async def _progress_callback(event: dict) -> None:
+    _broadcast(event)
+    if event.get("type") == "done":
+        _running["status"] = "done"
+    elif event.get("type") == "start":
+        _running["total"] = event.get("total", 0)
+        _running["done"] = 0
+    elif event.get("type") == "progress":
+        _running["done"] = event.get("done", 0)
 
 
 # ── 스키마 ──────────────────────────────────────────────────────────────────
@@ -78,7 +99,11 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
 
     async def _run():
         try:
-            results = await run_eval(prompt_version=req.version, doc_type=req.doc_type)
+            results = await run_eval(
+                prompt_version=req.version,
+                doc_type=req.doc_type,
+                on_progress=_progress_callback,
+            )
             if not results:
                 _running["status"] = "idle"
                 return
@@ -123,9 +148,42 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
         except Exception as e:
             _running["status"] = "error"
             _running["error"] = str(e)
+            _broadcast({"type": "error", "message": str(e)})
 
     background_tasks.add_task(_run)
     return {"message": f"Eval v{req.version} 시작됨", "status": "running"}
+
+
+@app.get("/eval/stream")
+async def eval_stream():
+    """SSE 엔드포인트 — Eval 진행 상황을 실시간으로 스트리밍한다."""
+    queue: asyncio.Queue = asyncio.Queue()
+    _sse_queues.append(queue)
+
+    async def generator() -> AsyncGenerator[str, None]:
+        try:
+            # 현재 상태 즉시 전송 (페이지 새로고침 후 재연결 시 동기화)
+            yield f"data: {json.dumps(_running or {'status': 'idle'})}\n\n"
+            while True:
+                try:
+                    data = await asyncio.wait_for(queue.get(), timeout=30)
+                    yield f"data: {data}\n\n"
+                    event = json.loads(data)
+                    if event.get("type") in ("done", "error"):
+                        break
+                except asyncio.TimeoutError:
+                    yield ": heartbeat\n\n"
+        finally:
+            _sse_queues.remove(queue)
+
+    return StreamingResponse(
+        generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get("/eval/status")

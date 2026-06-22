@@ -383,9 +383,9 @@
 <script>
   const API = '';
   let currentProposalId = null;
-  let pollTimer = null;
+  let evtSource = null;
 
-  function setStatus(status) {
+  function setStatus(status, extra = '') {
     const el = document.getElementById('statusBadge');
     const map = {
       idle:    ['idle',    '대기 중'],
@@ -394,7 +394,38 @@
       error:   ['error',   '오류'],
     };
     const [cls, label] = map[status] || ['idle', status];
-    el.innerHTML = `<span class="badge badge-${cls}"><span class="dot${cls==='running'?' dot-pulse':''}"></span>${label}</span>`;
+    el.innerHTML = `<span class="badge badge-${cls}"><span class="dot${cls==='running'?' dot-pulse':''}"></span>${label}${extra ? ' ' + extra : ''}</span>`;
+  }
+
+  function openSSE() {
+    if (evtSource) evtSource.close();
+    evtSource = new EventSource(`${API}/eval/stream`);
+    evtSource.onmessage = (e) => {
+      const ev = JSON.parse(e.data);
+      handleEvent(ev);
+    };
+    evtSource.onerror = () => {
+      evtSource.close();
+      evtSource = null;
+    };
+  }
+
+  function handleEvent(ev) {
+    if (ev.type === 'start') {
+      setStatus('running', `0 / ${ev.total}`);
+    } else if (ev.type === 'progress') {
+      setStatus('running', `${ev.done} / ${ev.total} — ${ev.doc_id} ${ev.grade}`);
+    } else if (ev.type === 'done') {
+      setStatus('done');
+      document.getElementById('runBtn').disabled = false;
+      if (evtSource) { evtSource.close(); evtSource = null; }
+      loadProposal();
+    } else if (ev.type === 'error') {
+      setStatus('error');
+      showToast('Eval 오류: ' + ev.message, 'error');
+      document.getElementById('runBtn').disabled = false;
+      if (evtSource) { evtSource.close(); evtSource = null; }
+    }
   }
 
   async function startEval() {
@@ -402,6 +433,8 @@
     document.getElementById('runBtn').disabled = true;
     document.getElementById('proposalCard').classList.add('hidden');
     setStatus('running');
+
+    openSSE();
 
     const res = await fetch(`${API}/eval/run`, {
       method: 'POST',
@@ -414,26 +447,8 @@
       showToast(err.detail || '실행 실패', 'error');
       setStatus('error');
       document.getElementById('runBtn').disabled = false;
+      if (evtSource) { evtSource.close(); evtSource = null; }
       return;
-    }
-
-    pollTimer = setInterval(pollStatus, 2000);
-  }
-
-  async function pollStatus() {
-    const res = await fetch(`${API}/eval/status`);
-    const data = await res.json();
-    const status = data.status || 'idle';
-    setStatus(status);
-
-    if (status === 'done') {
-      clearInterval(pollTimer);
-      document.getElementById('runBtn').disabled = false;
-      await loadProposal();
-    } else if (status === 'error') {
-      clearInterval(pollTimer);
-      document.getElementById('runBtn').disabled = false;
-      showToast('Eval 실행 오류: ' + (data.error || ''), 'error');
     }
   }
 
