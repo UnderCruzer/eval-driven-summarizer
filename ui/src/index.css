@@ -337,3 +337,60 @@ textarea[readonly] { opacity: 0.6; cursor: default; }
 @media (max-width: 700px) { .trace-grid { grid-template-columns: 1fr; } }
 .trace-json { background: var(--surface2); border-radius: 6px; padding: 10px 12px; font-size: 12px; overflow: auto; max-height: 200px; color: var(--text-muted); white-space: pre-wrap; word-break: break-all; }
 .trace-error { background: rgba(239,68,68,0.1); color: var(--red); border-radius: 6px; padding: 10px 12px; font-size: 13px; }
+
+/* ── playground ── */
+.playground { display: flex; flex-direction: column; gap: 20px; }
+
+.pg-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+.pg-controls label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+
+.pg-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .pg-inputs { grid-template-columns: 1fr; } }
+
+.pg-input-col { display: flex; flex-direction: column; gap: 8px; }
+.pg-label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.pg-optional { font-weight: 400; font-size: 12px; }
+.pg-textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 14px 16px;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+}
+.pg-textarea:focus { border-color: var(--accent); }
+
+.pg-result {
+  background: var(--surface);
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pg-result-header { display: flex; align-items: center; gap: 12px; }
+.pg-summary {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text);
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 16px;
+}
+.pg-reasoning { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.pg-reasoning-row { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text-muted); }

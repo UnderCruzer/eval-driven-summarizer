@@ -60,8 +60,6 @@ async def _progress_callback(event: dict) -> None:
         _running["done"] = 0
     elif event.get("type") == "progress":
         _running["done"] = event.get("done", 0)
-    elif event.get("type") == "done":
-        _running["status"] = "done"
 
 
 # ── 스키마 ──────────────────────────────────────────────────────────────────
@@ -74,6 +72,13 @@ class EvalRunRequest(BaseModel):
 class DecisionRequest(BaseModel):
     edited_system_prompt: str | None = None
     edited_user_template: str | None = None
+
+
+class PlaygroundRequest(BaseModel):
+    version: str = "v1"
+    doc_type: str = "news"
+    content: str
+    key_points: list[str] = []
 
 
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
@@ -140,6 +145,8 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
                 patterns=patterns,
             )
             _running["status"] = "done"
+            avg = sum(r.total_score for r in results) / len(results)
+            _broadcast({"type": "done", "avg_score": round(avg, 2)})
         except Exception as e:
             _running["status"] = "error"
             _running["error"] = str(e)
@@ -221,6 +228,55 @@ async def reject_proposal(proposal_id: int):
         raise HTTPException(status_code=400, detail=f"이미 {proposal['status']} 상태입니다.")
     update_proposal_status(proposal_id, "rejected")
     return {"message": "제안 거절됨"}
+
+
+# ── Playground 엔드포인트 ───────────────────────────────────────────────────
+
+@app.post("/playground/run")
+async def playground_run(req: PlaygroundRequest):
+    """단일 문서 즉석 요약 + 평가."""
+    from agent.summarizer import SummarizerAgent
+    from eval.judge import JudgeAgent
+
+    loop = asyncio.get_event_loop()
+
+    summarizer = SummarizerAgent(prompt_version=req.version)
+    output = await loop.run_in_executor(
+        None,
+        lambda: summarizer.summarize("playground", req.doc_type, req.content),
+    )
+
+    scores = None
+    if req.key_points:
+        judge = JudgeAgent()
+        result = await loop.run_in_executor(
+            None,
+            lambda: judge.evaluate(
+                doc_id="playground",
+                doc_type=req.doc_type,
+                content=req.content,
+                summary=output.summary,
+                prompt_version=req.version,
+                key_points=req.key_points,
+                reference_summary="",
+            ),
+        )
+        scores = {
+            "key_point_coverage": result.key_point_coverage.score,
+            "faithfulness":       result.faithfulness.score,
+            "information_loss":   result.information_loss.score,
+            "length_adequacy":    result.length_adequacy.score,
+            "total_score":        result.total_score,
+            "grade":              result.grade,
+            "reasoning": {
+                "key_point_coverage": result.key_point_coverage.reasoning,
+                "faithfulness":       result.faithfulness.reasoning,
+                "information_loss":   result.information_loss.reasoning,
+                "length_adequacy":    result.length_adequacy.reasoning,
+            },
+        }
+
+    return {"summary": output.summary, "prompt_version": output.prompt_version, "scores": scores}
 
 
 # ── 대시보드 엔드포인트 ──────────────────────────────────────────────────────
