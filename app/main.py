@@ -95,6 +95,12 @@ class DebateRequest(BaseModel):
     key_points: list[str] = []
 
 
+class ExplainRequest(BaseModel):
+    version: str = "v1"
+    doc_type: str = "news"
+    content: str
+
+
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -388,6 +394,30 @@ async def playground_debate(req: DebateRequest):
             "b_weaknesses": verdict.b_weaknesses,
             "final_verdict": verdict.final_verdict,
         },
+    }
+
+
+@app.post("/playground/explain")
+async def playground_explain(req: ExplainRequest):
+    """요약 생성 후 문장별 원문 출처 매핑."""
+    from agent.summarizer import SummarizerAgent
+    from agent.explainer import ExplainerAgent
+
+    loop = asyncio.get_event_loop()
+    summarizer = SummarizerAgent(prompt_version=req.version)
+    output = await loop.run_in_executor(
+        None, lambda: summarizer.summarize("explain", req.doc_type, req.content)
+    )
+    explainer = ExplainerAgent()
+    explanation = await loop.run_in_executor(
+        None, lambda: explainer.explain(req.content, output.summary)
+    )
+    return {
+        "summary": output.summary,
+        "mappings": [
+            {"sentence": m.sentence, "source_quotes": m.source_quotes}
+            for m in explanation.mappings
+        ],
     }
 
 
