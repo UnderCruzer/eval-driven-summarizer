@@ -54,6 +54,36 @@ export async function rejectProposal(id: number) {
   return res.json()
 }
 
+export async function runPlayground(payload: {
+  version: string
+  doc_type: string
+  content: string
+  key_points: string[]
+}): Promise<{
+  summary: string
+  prompt_version: string
+  scores: {
+    key_point_coverage: number
+    faithfulness: number
+    information_loss: number
+    length_adequacy: number
+    total_score: number
+    grade: string
+    reasoning: Record<string, string>
+  } | null
+}> {
+  const res = await fetch(`${BASE}/playground/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail ?? '실행 실패')
+  }
+  return res.json()
+}
+
 export async function fetchVersions(): Promise<{
   averages: VersionAvg[]
   grade_dist: Record<string, Record<string, number>>

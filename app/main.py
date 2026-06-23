@@ -74,6 +74,13 @@ class DecisionRequest(BaseModel):
     edited_user_template: str | None = None
 
 
+class PlaygroundRequest(BaseModel):
+    version: str = "v1"
+    doc_type: str = "news"
+    content: str
+    key_points: list[str] = []
+
+
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -221,6 +228,55 @@ async def reject_proposal(proposal_id: int):
         raise HTTPException(status_code=400, detail=f"이미 {proposal['status']} 상태입니다.")
     update_proposal_status(proposal_id, "rejected")
     return {"message": "제안 거절됨"}
+
+
+# ── Playground 엔드포인트 ───────────────────────────────────────────────────
+
+@app.post("/playground/run")
+async def playground_run(req: PlaygroundRequest):
+    """단일 문서 즉석 요약 + 평가."""
+    from agent.summarizer import SummarizerAgent
+    from eval.judge import JudgeAgent
+
+    loop = asyncio.get_event_loop()
+
+    summarizer = SummarizerAgent(prompt_version=req.version)
+    output = await loop.run_in_executor(
+        None,
+        lambda: summarizer.summarize("playground", req.doc_type, req.content),
+    )
+
+    scores = None
+    if req.key_points:
+        judge = JudgeAgent()
+        result = await loop.run_in_executor(
+            None,
+            lambda: judge.evaluate(
+                doc_id="playground",
+                doc_type=req.doc_type,
+                content=req.content,
+                summary=output.summary,
+                prompt_version=req.version,
+                key_points=req.key_points,
+                reference_summary="",
+            ),
+        )
+        scores = {
+            "key_point_coverage": result.key_point_coverage.score,
+            "faithfulness":       result.faithfulness.score,
+            "information_loss":   result.information_loss.score,
+            "length_adequacy":    result.length_adequacy.score,
+            "total_score":        result.total_score,
+            "grade":              result.grade,
+            "reasoning": {
+                "key_point_coverage": result.key_point_coverage.reasoning,
+                "faithfulness":       result.faithfulness.reasoning,
+                "information_loss":   result.information_loss.reasoning,
+                "length_adequacy":    result.length_adequacy.reasoning,
+            },
+        }
+
+    return {"summary": output.summary, "prompt_version": output.prompt_version, "scores": scores}
 
 
 # ── 대시보드 엔드포인트 ──────────────────────────────────────────────────────
