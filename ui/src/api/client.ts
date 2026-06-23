@@ -108,6 +108,26 @@ export async function runCritique(payload: {
   return res.json()
 }
 
+export async function runExplain(payload: {
+  version: string
+  doc_type: string
+  content: string
+}): Promise<{
+  summary: string
+  mappings: { sentence: string; source_quotes: string[] }[]
+}> {
+  const res = await fetch(`${BASE}/playground/explain`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail ?? '실행 실패')
+  }
+  return res.json()
+}
+
 export async function runDebate(payload: {
   version: string
   doc_type: string
