@@ -3,8 +3,8 @@ import os
 import sqlite3
 from pathlib import Path
 
-import anthropic
 from pydantic import BaseModel
+from agent.llm import call_llm
 
 DB_PATH = Path("data/results.db")
 
@@ -29,8 +29,7 @@ class AnalysisReport(BaseModel):
 
 class FailureAnalyzer:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        self.model = os.environ.get("JUDGE_MODEL", "claude-sonnet-4-6")
+        self.model = os.environ.get("JUDGE_MODEL", "gemini-2.5-flash")
 
     def analyze(self, run_id: str) -> AnalysisReport:
         rows = self._load_results(run_id)
@@ -40,16 +39,13 @@ class FailureAnalyzer:
         prompt_version = rows[0]["prompt_version"]
         avg_score = sum(r["total_score"] for r in rows) / len(rows)
 
-        # 가장 낮은 지표 찾기
         metric_avgs = {
             m: sum(r[m] for r in rows) / len(rows)
             for m in ("key_point_coverage", "faithfulness", "information_loss", "length_adequacy")
         }
         weak_metric = min(metric_avgs, key=metric_avgs.get)
 
-        # 실패 케이스 (점수 3점 미만) 추출
         failures = [r for r in rows if r["total_score"] < 3.0]
-
         patterns = self._extract_patterns(rows, failures)
 
         return AnalysisReport(
@@ -73,7 +69,6 @@ class FailureAnalyzer:
     def _extract_patterns(self, all_rows: list[dict], failures: list[dict]) -> list[FailurePattern]:
         patterns = []
 
-        # 지표별 낮은 점수 패턴 분류
         thresholds = {
             "key_point_coverage": ("missing_keypoints", "핵심 포인트 누락"),
             "faithfulness": ("hallucination", "사실 오류/환각"),
@@ -104,19 +99,15 @@ class FailureAnalyzer:
 
     def _generate_hint(self, category: str, reasonings: list[str]) -> str:
         reasoning_text = "\n".join(f"- {r}" for r in reasonings if r)
-        response = self.client.messages.create(
-            model=self.model,
+        return call_llm(
+            self.model,
+            (
+                f"다음은 문서 요약 평가에서 '{category}' 문제가 발생한 사례들의 평가 근거입니다:\n"
+                f"{reasoning_text}\n\n"
+                "이 문제를 해결하기 위한 프롬프트 개선 힌트를 한 문장으로 제시해 주세요."
+            ),
             max_tokens=256,
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"다음은 문서 요약 평가에서 '{category}' 문제가 발생한 사례들의 평가 근거입니다:\n"
-                    f"{reasoning_text}\n\n"
-                    "이 문제를 해결하기 위한 프롬프트 개선 힌트를 한 문장으로 제시해 주세요."
-                ),
-            }],
         )
-        return response.content[0].text.strip()
 
     def _generate_suggestion(
         self,
@@ -129,18 +120,14 @@ class FailureAnalyzer:
             f"- [{p.category}] {p.description} (발생 {p.frequency}건): {p.improvement_hint}"
             for p in patterns
         )
-        response = self.client.messages.create(
-            model=self.model,
+        return call_llm(
+            self.model,
+            (
+                f"문서 요약 에이전트 평가 결과입니다.\n\n"
+                f"지표별 평균:\n{avgs_text}\n\n"
+                f"발견된 실패 패턴:\n{patterns_text}\n\n"
+                f"가장 취약한 지표: {weak_metric}\n\n"
+                "프롬프트를 어떻게 개선해야 할지 핵심만 2~3문장으로 제안해 주세요."
+            ),
             max_tokens=300,
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"문서 요약 에이전트 평가 결과입니다.\n\n"
-                    f"지표별 평균:\n{avgs_text}\n\n"
-                    f"발견된 실패 패턴:\n{patterns_text}\n\n"
-                    f"가장 취약한 지표: {weak_metric}\n\n"
-                    "프롬프트를 어떻게 개선해야 할지 핵심만 2~3문장으로 제안해 주세요."
-                ),
-            }],
         )
-        return response.content[0].text.strip()

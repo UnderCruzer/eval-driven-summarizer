@@ -88,6 +88,13 @@ class CritiqueRequest(BaseModel):
     key_points: list[str] = []
 
 
+class DebateRequest(BaseModel):
+    version: str = "v1"
+    doc_type: str = "news"
+    content: str
+    key_points: list[str] = []
+
+
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -347,6 +354,40 @@ async def playground_critique(req: CritiqueRequest):
         "summary_b": summary_b,
         "scores_a":  scores_a,
         "scores_b":  scores_b,
+    }
+
+
+@app.post("/playground/debate")
+async def playground_debate(req: DebateRequest):
+    """에이전트 토론: Summarizer A(간결) vs B(포괄) → Debate Judge 판결."""
+    from agent.debate import DebateSummarizer, DebateJudge
+
+    loop = asyncio.get_event_loop()
+    debater = DebateSummarizer(prompt_version=req.version)
+    judge = DebateJudge()
+
+    summary_a, summary_b = await asyncio.gather(
+        loop.run_in_executor(None, lambda: debater.summarize_a(req.doc_type, req.content)),
+        loop.run_in_executor(None, lambda: debater.summarize_b(req.doc_type, req.content)),
+    )
+
+    verdict = await loop.run_in_executor(
+        None,
+        lambda: judge.judge(req.doc_type, req.content, summary_a, summary_b, req.key_points),
+    )
+
+    return {
+        "summary_a": {"strategy": summary_a.strategy, "summary": summary_a.summary},
+        "summary_b": {"strategy": summary_b.strategy, "summary": summary_b.summary},
+        "verdict": {
+            "winner": verdict.winner,
+            "winner_reason": verdict.winner_reason,
+            "a_strengths": verdict.a_strengths,
+            "b_strengths": verdict.b_strengths,
+            "a_weaknesses": verdict.a_weaknesses,
+            "b_weaknesses": verdict.b_weaknesses,
+            "final_verdict": verdict.final_verdict,
+        },
     }
 
 

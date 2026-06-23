@@ -1,8 +1,7 @@
 import json
 import os
-import re
-import anthropic
 from eval.metrics import EvalResult, MetricScore, METRIC_DEFINITIONS
+from agent.llm import call_llm
 
 
 def _parse_json_robust(text: str) -> dict:
@@ -21,8 +20,7 @@ def _parse_json_robust(text: str) -> dict:
 
 class JudgeAgent:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        self.model = os.environ.get("JUDGE_MODEL", "claude-sonnet-4-6")
+        self.model = os.environ.get("JUDGE_MODEL", "gemini-2.5-flash")
 
     def evaluate(
         self,
@@ -74,14 +72,7 @@ class JudgeAgent:
             reference_summary=reference_summary,
         )
 
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=1024,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-
-        text = response.content[0].text.strip()
+        text = call_llm(self.model, user, system=system, max_tokens=1024)
         return _parse_json_robust(text)
 
 

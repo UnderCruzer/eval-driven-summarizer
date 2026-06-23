@@ -1,6 +1,6 @@
 import os
-import anthropic
 from pydantic import BaseModel
+from agent.llm import call_llm
 
 
 class CritiqueOutput(BaseModel):
@@ -13,8 +13,7 @@ class CriticAgent:
     """요약을 검토해 빠진 정보와 오류를 지적하고 개선 지시를 내리는 에이전트."""
 
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        self.model = os.environ.get("CRITIC_MODEL", "claude-sonnet-4-6")
+        self.model = os.environ.get("CRITIC_MODEL", "gemini-2.5-flash")
 
     def critique(
         self,
@@ -49,24 +48,21 @@ class CriticAgent:
   "improvement_directive": "다음 요약 작성 시 반드시 반영할 구체적 지시사항"
 }}"""
 
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=1024,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-
+        text = call_llm(self.model, user, system=system, max_tokens=1024)
         from eval.judge import _parse_json_robust
-        data = _parse_json_robust(response.content[0].text.strip())
-        return CritiqueOutput(**data)
+        data = _parse_json_robust(text)
+        return CritiqueOutput(
+            missing_points=data.get("missing_points", []),
+            factual_errors=data.get("factual_errors", []),
+            improvement_directive=data.get("improvement_directive", ""),
+        )
 
 
 class SummarizerWithCritique:
     """Critic의 지시를 반영해 요약을 개선하는 Summarizer B."""
 
     def __init__(self, prompt_version: str = "v1"):
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        self.model = os.environ.get("SUMMARIZER_MODEL", "claude-sonnet-4-6")
+        self.model = os.environ.get("SUMMARIZER_MODEL", "gemini-2.5-flash")
         self.prompt_version = prompt_version
 
     def refine(
@@ -76,9 +72,6 @@ class SummarizerWithCritique:
         first_summary: str,
         critique: CritiqueOutput,
     ) -> str:
-        from agent.prompts import PROMPTS
-        _, user_template = PROMPTS.get(self.prompt_version, list(PROMPTS.values())[0])
-
         missing = "\n".join(f"- {p}" for p in critique.missing_points) or "없음"
         errors  = "\n".join(f"- {e}" for e in critique.factual_errors)  or "없음"
 
@@ -106,10 +99,4 @@ class SummarizerWithCritique:
 
 위 피드백을 모두 반영해 개선된 요약을 작성하세요. 요약만 출력하세요."""
 
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=2048,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        return response.content[0].text.strip()
+        return call_llm(self.model, user, system=system, max_tokens=2048)
