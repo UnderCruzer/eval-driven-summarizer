@@ -35,10 +35,10 @@ type TabId = 'approval' | 'playground' | 'critique' | 'debate' | 'explain' | 'da
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'approval',   label: '승인 게이트' },
-  { id: 'playground', label: '🧪 Playground' },
-  { id: 'critique',   label: '🤖 멀티 에이전트' },
-  { id: 'debate',     label: '⚔️ 에이전트 토론' },
-  { id: 'explain',    label: '🔍 출처 분석' },
+  { id: 'playground', label: 'Playground' },
+  { id: 'critique',   label: '멀티 에이전트' },
+  { id: 'debate',     label: '에이전트 토론' },
+  { id: 'explain',    label: '출처 분석' },
   { id: 'dashboard',  label: '대시보드' },
 ]
 
