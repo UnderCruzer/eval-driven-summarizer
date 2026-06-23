@@ -81,6 +81,20 @@ class PlaygroundRequest(BaseModel):
     key_points: list[str] = []
 
 
+class CritiqueRequest(BaseModel):
+    version: str = "v1"
+    doc_type: str = "news"
+    content: str
+    key_points: list[str] = []
+
+
+class DebateRequest(BaseModel):
+    version: str = "v1"
+    doc_type: str = "news"
+    content: str
+    key_points: list[str] = []
+
+
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -277,6 +291,104 @@ async def playground_run(req: PlaygroundRequest):
         }
 
     return {"summary": output.summary, "prompt_version": output.prompt_version, "scores": scores}
+
+
+@app.post("/playground/critique")
+async def playground_critique(req: CritiqueRequest):
+    """멀티 에이전트 크리틱: Summarizer A → Critic → Summarizer B."""
+    from agent.summarizer import SummarizerAgent
+    from agent.critic import CriticAgent, SummarizerWithCritique
+    from eval.judge import JudgeAgent
+
+    loop = asyncio.get_event_loop()
+
+    # Step 1 — Summarizer A
+    summarizer_a = SummarizerAgent(prompt_version=req.version)
+    output_a = await loop.run_in_executor(
+        None, lambda: summarizer_a.summarize("critique", req.doc_type, req.content)
+    )
+
+    # Step 2 — Critic Agent
+    critic = CriticAgent()
+    critique = await loop.run_in_executor(
+        None, lambda: critic.critique(req.doc_type, req.content, output_a.summary, req.key_points)
+    )
+
+    # Step 3 — Summarizer B (refined)
+    summarizer_b = SummarizerWithCritique(prompt_version=req.version)
+    summary_b = await loop.run_in_executor(
+        None, lambda: summarizer_b.refine(req.doc_type, req.content, output_a.summary, critique)
+    )
+
+    # Step 4 — Judge both (선택적, key_points 있을 때만)
+    scores_a = scores_b = None
+    if req.key_points:
+        judge = JudgeAgent()
+        result_a = await loop.run_in_executor(
+            None, lambda: judge.evaluate("critique_a", req.doc_type, req.content,
+                                         output_a.summary, req.version, req.key_points, "")
+        )
+        result_b = await loop.run_in_executor(
+            None, lambda: judge.evaluate("critique_b", req.doc_type, req.content,
+                                         summary_b, req.version, req.key_points, "")
+        )
+        def _score(r):
+            return {
+                "key_point_coverage": r.key_point_coverage.score,
+                "faithfulness":       r.faithfulness.score,
+                "information_loss":   r.information_loss.score,
+                "length_adequacy":    r.length_adequacy.score,
+                "total_score":        r.total_score,
+                "grade":              r.grade,
+            }
+        scores_a = _score(result_a)
+        scores_b = _score(result_b)
+
+    return {
+        "summary_a": output_a.summary,
+        "critique": {
+            "missing_points":        critique.missing_points,
+            "factual_errors":        critique.factual_errors,
+            "improvement_directive": critique.improvement_directive,
+        },
+        "summary_b": summary_b,
+        "scores_a":  scores_a,
+        "scores_b":  scores_b,
+    }
+
+
+@app.post("/playground/debate")
+async def playground_debate(req: DebateRequest):
+    """에이전트 토론: Summarizer A(간결) vs B(포괄) → Debate Judge 판결."""
+    from agent.debate import DebateSummarizer, DebateJudge
+
+    loop = asyncio.get_event_loop()
+    debater = DebateSummarizer(prompt_version=req.version)
+    judge = DebateJudge()
+
+    summary_a, summary_b = await asyncio.gather(
+        loop.run_in_executor(None, lambda: debater.summarize_a(req.doc_type, req.content)),
+        loop.run_in_executor(None, lambda: debater.summarize_b(req.doc_type, req.content)),
+    )
+
+    verdict = await loop.run_in_executor(
+        None,
+        lambda: judge.judge(req.doc_type, req.content, summary_a, summary_b, req.key_points),
+    )
+
+    return {
+        "summary_a": {"strategy": summary_a.strategy, "summary": summary_a.summary},
+        "summary_b": {"strategy": summary_b.strategy, "summary": summary_b.summary},
+        "verdict": {
+            "winner": verdict.winner,
+            "winner_reason": verdict.winner_reason,
+            "a_strengths": verdict.a_strengths,
+            "b_strengths": verdict.b_strengths,
+            "a_weaknesses": verdict.a_weaknesses,
+            "b_weaknesses": verdict.b_weaknesses,
+            "final_verdict": verdict.final_verdict,
+        },
+    }
 
 
 # ── 대시보드 엔드포인트 ──────────────────────────────────────────────────────

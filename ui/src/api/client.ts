@@ -84,6 +84,60 @@ export async function runPlayground(payload: {
   return res.json()
 }
 
+export async function runCritique(payload: {
+  version: string
+  doc_type: string
+  content: string
+  key_points: string[]
+}): Promise<{
+  summary_a: string
+  critique: { missing_points: string[]; factual_errors: string[]; improvement_directive: string }
+  summary_b: string
+  scores_a: { key_point_coverage: number; faithfulness: number; information_loss: number; length_adequacy: number; total_score: number; grade: string } | null
+  scores_b: { key_point_coverage: number; faithfulness: number; information_loss: number; length_adequacy: number; total_score: number; grade: string } | null
+}> {
+  const res = await fetch(`${BASE}/playground/critique`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail ?? '실행 실패')
+  }
+  return res.json()
+}
+
+export async function runDebate(payload: {
+  version: string
+  doc_type: string
+  content: string
+  key_points: string[]
+}): Promise<{
+  summary_a: { strategy: string; summary: string }
+  summary_b: { strategy: string; summary: string }
+  verdict: {
+    winner: 'A' | 'B' | 'tie'
+    winner_reason: string
+    a_strengths: string[]
+    b_strengths: string[]
+    a_weaknesses: string[]
+    b_weaknesses: string[]
+    final_verdict: string
+  }
+}> {
+  const res = await fetch(`${BASE}/playground/debate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail ?? '실행 실패')
+  }
+  return res.json()
+}
+
 export async function fetchVersions(): Promise<{
   averages: VersionAvg[]
   grade_dist: Record<string, Record<string, number>>

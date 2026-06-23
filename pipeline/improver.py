@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
 
-import anthropic
 from pydantic import BaseModel
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 
 from agent.prompts import PROMPTS
+from agent.llm import call_llm
 from eval.analyzer import AnalysisReport
 
 console = Console()
@@ -23,8 +23,7 @@ class ImproveProposal(BaseModel):
 
 class PromptImprover:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        self.model = os.environ.get("JUDGE_MODEL", "claude-sonnet-4-6")
+        self.model = os.environ.get("JUDGE_MODEL", "gemini-2.5-flash")
 
     def propose(self, report: AnalysisReport) -> ImproveProposal:
         base_version = report.prompt_version
@@ -35,34 +34,27 @@ class PromptImprover:
             for p in report.patterns
         )
 
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=1024,
-            system=(
-                "당신은 LLM 프롬프트 엔지니어입니다. "
-                "평가 결과를 분석해 기존 프롬프트를 개선한 새 버전을 제안하세요. "
-                "반드시 아래 JSON 형식으로만 응답하세요:\n"
-                '{"system_prompt": "...", "user_template": "...", "rationale": "..."}\n'
-                "user_template에는 {doc_type}과 {content} 플레이스홀더를 반드시 포함하세요."
-            ),
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"## 현재 프롬프트 ({base_version})\n\n"
-                    f"[System]\n{system_prompt}\n\n"
-                    f"[User Template]\n{user_template}\n\n"
-                    f"## 평가 결과\n"
-                    f"- 평균 점수: {report.avg_score} / 5.0\n"
-                    f"- 가장 취약한 지표: {report.weak_metric}\n\n"
-                    f"## 실패 패턴\n{patterns_text}\n\n"
-                    f"## 전체 개선 제안\n{report.overall_suggestion}\n\n"
-                    "위 분석을 바탕으로 개선된 프롬프트를 JSON으로 작성해 주세요."
-                ),
-            }],
+        system = (
+            "당신은 LLM 프롬프트 엔지니어입니다. "
+            "평가 결과를 분석해 기존 프롬프트를 개선한 새 버전을 제안하세요. "
+            "반드시 아래 JSON 형식으로만 응답하세요:\n"
+            '{"system_prompt": "...", "user_template": "...", "rationale": "..."}\n'
+            "user_template에는 {doc_type}과 {content} 플레이스홀더를 반드시 포함하세요."
+        )
+        user = (
+            f"## 현재 프롬프트 ({base_version})\n\n"
+            f"[System]\n{system_prompt}\n\n"
+            f"[User Template]\n{user_template}\n\n"
+            f"## 평가 결과\n"
+            f"- 평균 점수: {report.avg_score} / 5.0\n"
+            f"- 가장 취약한 지표: {report.weak_metric}\n\n"
+            f"## 실패 패턴\n{patterns_text}\n\n"
+            f"## 전체 개선 제안\n{report.overall_suggestion}\n\n"
+            "위 분석을 바탕으로 개선된 프롬프트를 JSON으로 작성해 주세요."
         )
 
+        text = call_llm(self.model, user, system=system, max_tokens=1024)
         from eval.judge import _parse_json_robust
-        text = response.content[0].text.strip()
         data = _parse_json_robust(text)
         new_version = _next_version(base_version)
 
