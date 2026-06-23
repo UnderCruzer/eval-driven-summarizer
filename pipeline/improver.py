@@ -61,14 +61,9 @@ class PromptImprover:
             }],
         )
 
-        import json
+        from eval.judge import _parse_json_robust
         text = response.content[0].text.strip()
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[1].split("```")[0].strip()
-
-        data = json.loads(text)
+        data = _parse_json_robust(text)
         new_version = _next_version(base_version)
 
         return ImproveProposal(

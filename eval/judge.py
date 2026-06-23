@@ -1,7 +1,22 @@
 import json
 import os
+import re
 import anthropic
 from eval.metrics import EvalResult, MetricScore, METRIC_DEFINITIONS
+
+
+def _parse_json_robust(text: str) -> dict:
+    """```json 블록 추출 → json.loads → json_repair 순서로 파싱 시도."""
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        from json_repair import repair_json
+        return json.loads(repair_json(text))
 
 
 class JudgeAgent:
@@ -67,13 +82,7 @@ class JudgeAgent:
         )
 
         text = response.content[0].text.strip()
-        # JSON 블록만 추출
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[1].split("```")[0].strip()
-
-        return json.loads(text)
+        return _parse_json_robust(text)
 
 
 def _build_system_prompt() -> str:

@@ -153,9 +153,6 @@ async def run_eval(
                 })
 
     _print_summary(results, run_id)
-    if on_progress:
-        avg = sum(r.total_score for r in results) / len(results)
-        await on_progress({"type": "done", "avg_score": round(avg, 2), "run_id": run_id})
     return results
 
 

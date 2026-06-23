@@ -60,8 +60,6 @@ async def _progress_callback(event: dict) -> None:
         _running["done"] = 0
     elif event.get("type") == "progress":
         _running["done"] = event.get("done", 0)
-    elif event.get("type") == "done":
-        _running["status"] = "done"
 
 
 # ── 스키마 ──────────────────────────────────────────────────────────────────
@@ -140,6 +138,8 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
                 patterns=patterns,
             )
             _running["status"] = "done"
+            avg = sum(r.total_score for r in results) / len(results)
+            _broadcast({"type": "done", "avg_score": round(avg, 2)})
         except Exception as e:
             _running["status"] = "error"
             _running["error"] = str(e)
