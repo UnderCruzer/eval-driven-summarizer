@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Eval-driven document summarization agent: summarize → evaluate → improve loop"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic>=0.40.0",
+    "google-genai>=1.0.0",
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",
     "pydantic>=2.10.0",
