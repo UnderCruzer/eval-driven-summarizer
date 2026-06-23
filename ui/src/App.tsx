@@ -8,6 +8,7 @@ import { VersionTab } from './components/dashboard/VersionTab'
 import { FailureTab } from './components/dashboard/FailureTab'
 import { TraceTab } from './components/dashboard/TraceTab'
 import { PlaygroundTab } from './components/PlaygroundTab'
+import { CritiqueTab } from './components/CritiqueTab'
 import './index.css'
 
 interface Progress {
@@ -30,11 +31,12 @@ const DOC_TYPES = [
   { value: 'meeting', label: '회의록 (한국어)' },
   { value: 'en_news', label: 'News (English)' },
 ]
-type TabId = 'approval' | 'playground' | 'versions' | 'failures' | 'traces'
+type TabId = 'approval' | 'playground' | 'critique' | 'versions' | 'failures' | 'traces'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'approval',   label: '승인 게이트' },
   { id: 'playground', label: '🧪 Playground' },
+  { id: 'critique',   label: '🤖 멀티 에이전트' },
   { id: 'versions',   label: '📈 버전 비교' },
   { id: 'failures',   label: '🔍 실패 케이스' },
   { id: 'traces',     label: '🧵 트레이스' },
@@ -157,6 +159,7 @@ export default function App() {
         )}
 
         {activeTab === 'playground' && <PlaygroundTab />}
+        {activeTab === 'critique'   && <CritiqueTab />}
         {activeTab === 'versions' && <VersionTab />}
         {activeTab === 'failures' && <FailureTab />}
         {activeTab === 'traces'   && <TraceTab />}
