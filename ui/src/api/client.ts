@@ -108,6 +108,20 @@ export async function runCritique(payload: {
   return res.json()
 }
 
+export async function getAutonomy(): Promise<{ threshold: number; enabled: boolean }> {
+  const res = await fetch(`${BASE}/settings/autonomy`)
+  return res.json()
+}
+
+export async function setAutonomy(payload: { threshold: number; enabled: boolean }) {
+  const res = await fetch(`${BASE}/settings/autonomy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return res.json()
+}
+
 export async function runExplain(payload: {
   version: string
   doc_type: string

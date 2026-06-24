@@ -9,6 +9,7 @@ import { PlaygroundTab } from './components/PlaygroundTab'
 import { CritiqueTab } from './components/CritiqueTab'
 import { DebateTab } from './components/DebateTab'
 import { ExplainTab } from './components/ExplainTab'
+import { AutonomyDial } from './components/AutonomyDial'
 import './index.css'
 
 interface Progress {
@@ -68,9 +69,13 @@ export default function App() {
     } else if (ev.type === 'done') {
       setStatus('done')
       setSseEnabled(false)
-      fetchLatestProposal()
-        .then(setProposal)
-        .catch(() => showToast('제안 로드 실패', 'error'))
+      if (ev.auto_approved) {
+        showToast(`자동 승인 완료 (점수 ${ev.avg_score} ≥ ${ev.threshold})`, 'success')
+      } else {
+        fetchLatestProposal()
+          .then(setProposal)
+          .catch(() => showToast('제안 로드 실패', 'error'))
+      }
     } else if (ev.type === 'error') {
       setStatus('error')
       setSseEnabled(false)
@@ -121,6 +126,7 @@ export default function App() {
 
         {activeTab === 'approval' && (
           <>
+            <AutonomyDial />
             <div className="run-panel">
               <div>
                 <label>프롬프트 버전</label>

@@ -71,5 +71,5 @@ export interface TraceRow {
 export type SSEEventType =
   | { type: 'start'; total: number; version: string; run_id: string }
   | { type: 'progress'; done: number; total: number; doc_id: string; grade: string; total_score: number }
-  | { type: 'done'; avg_score: number; run_id: string }
+  | { type: 'done'; avg_score: number; run_id: string; auto_approved?: boolean; threshold?: number }
   | { type: 'error'; message: string }
