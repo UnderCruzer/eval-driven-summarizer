@@ -45,6 +45,7 @@ static_path.mkdir(exist_ok=True)
 
 _running: dict = {}
 _sse_queues: list[asyncio.Queue] = []
+_autonomy: dict = {"threshold": 4.0, "enabled": False}  # Confidence Signal 설정
 
 
 def _broadcast(event: dict) -> None:
@@ -101,6 +102,11 @@ class ExplainRequest(BaseModel):
     content: str
 
 
+class AutonomySettings(BaseModel):
+    threshold: float = 4.0
+    enabled: bool = False
+
+
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -154,7 +160,7 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
                 for p in report.patterns
             ]
 
-            save_proposal(
+            proposal_id = save_proposal(
                 base_version=proposal.base_version,
                 new_version=proposal.new_version,
                 new_system_prompt=proposal.new_system_prompt,
@@ -166,7 +172,20 @@ async def eval_run(req: EvalRunRequest, background_tasks: BackgroundTasks):
             )
             _running["status"] = "done"
             avg = sum(r.total_score for r in results) / len(results)
-            _broadcast({"type": "done", "avg_score": round(avg, 2)})
+
+            # Confidence Signal — 임계값 이상이면 자동 승인
+            auto_approved = False
+            if _autonomy["enabled"] and report.avg_score >= _autonomy["threshold"]:
+                _write_to_prompts(proposal)
+                update_proposal_status(proposal_id, "approved")
+                auto_approved = True
+
+            _broadcast({
+                "type": "done",
+                "avg_score": round(avg, 2),
+                "auto_approved": auto_approved,
+                "threshold": _autonomy["threshold"] if _autonomy["enabled"] else None,
+            })
         except Exception as e:
             _running["status"] = "error"
             _running["error"] = str(e)
@@ -395,6 +414,18 @@ async def playground_debate(req: DebateRequest):
             "final_verdict": verdict.final_verdict,
         },
     }
+
+
+@app.get("/settings/autonomy")
+async def get_autonomy():
+    return _autonomy
+
+
+@app.post("/settings/autonomy")
+async def set_autonomy(req: AutonomySettings):
+    _autonomy["threshold"] = req.threshold
+    _autonomy["enabled"] = req.enabled
+    return _autonomy
 
 
 @app.post("/playground/explain")

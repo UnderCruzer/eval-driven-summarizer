@@ -620,3 +620,92 @@ textarea[readonly] { opacity: 0.6; cursor: default; }
 }
 .dashboard-subbtn:hover { background: var(--surface); color: var(--text); }
 .dashboard-subbtn-active { background: var(--surface); color: var(--text); font-weight: 600; }
+
+/* ── Autonomy Dial ───────────────────────────────────────────────────────── */
+.autonomy-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.autonomy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.autonomy-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.autonomy-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-btn {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--border);
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.toggle-btn.toggle-on { background: var(--accent); }
+
+.toggle-knob {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+.toggle-btn.toggle-on .toggle-knob { transform: translateX(18px); }
+
+.autonomy-body { display: flex; flex-direction: column; gap: 10px; }
+
+.autonomy-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.autonomy-label { font-size: 13px; color: var(--text-muted); min-width: 40px; }
+
+.autonomy-slider {
+  flex: 1;
+  min-width: 140px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.autonomy-slider:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.autonomy-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 32px;
+}
+
+.autonomy-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
