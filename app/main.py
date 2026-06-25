@@ -107,6 +107,13 @@ class AutonomySettings(BaseModel):
     enabled: bool = False
 
 
+class CrawlRunRequest(BaseModel):
+    url: str
+    version: str = "v1"
+    doc_type: str = "news"
+    key_points: list[str] = []
+
+
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -449,6 +456,71 @@ async def playground_explain(req: ExplainRequest):
             {"sentence": m.sentence, "source_quotes": m.source_quotes}
             for m in explanation.mappings
         ],
+    }
+
+
+@app.get("/crawl")
+async def crawl_url_endpoint(url: str):
+    """URL 크롤링 → 제목 + 본문 반환."""
+    from agent.crawler import crawl_url
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, lambda: crawl_url(url))
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/playground/crawl-run")
+async def playground_crawl_run(req: CrawlRunRequest):
+    """URL 크롤링 → 요약 → 평가 통합 파이프라인."""
+    from agent.crawler import crawl_url
+    from agent.summarizer import SummarizerAgent
+    from eval.judge import JudgeAgent
+
+    loop = asyncio.get_event_loop()
+
+    try:
+        crawled = await loop.run_in_executor(None, lambda: crawl_url(req.url))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    content = crawled["content"]
+    summarizer = SummarizerAgent(prompt_version=req.version)
+    output = await loop.run_in_executor(
+        None, lambda: summarizer.summarize("crawl", req.doc_type, content)
+    )
+
+    scores = None
+    if req.key_points:
+        judge = JudgeAgent()
+        result = await loop.run_in_executor(
+            None,
+            lambda: judge.evaluate(
+                "crawl", req.doc_type, content, output.summary,
+                req.version, req.key_points, ""
+            ),
+        )
+        scores = {
+            "key_point_coverage": result.key_point_coverage.score,
+            "faithfulness":       result.faithfulness.score,
+            "information_loss":   result.information_loss.score,
+            "length_adequacy":    result.length_adequacy.score,
+            "total_score":        result.total_score,
+            "grade":              result.grade,
+            "reasoning": {
+                "key_point_coverage": result.key_point_coverage.reasoning,
+                "faithfulness":       result.faithfulness.reasoning,
+                "information_loss":   result.information_loss.reasoning,
+                "length_adequacy":    result.length_adequacy.reasoning,
+            },
+        }
+
+    return {
+        "title": crawled["title"],
+        "content": content,
+        "summary": output.summary,
+        "prompt_version": output.prompt_version,
+        "scores": scores,
     }
 
 
