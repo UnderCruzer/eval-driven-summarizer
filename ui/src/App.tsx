@@ -6,11 +6,9 @@ import { StatusBadge } from './components/StatusBadge'
 import { ProposalCard } from './components/ProposalCard'
 import { DashboardTab } from './components/dashboard/DashboardTab'
 import { PlaygroundTab } from './components/PlaygroundTab'
-import { CritiqueTab } from './components/CritiqueTab'
-import { DebateTab } from './components/DebateTab'
+import { AgentLabTab } from './components/AgentLabTab'
 import { ExplainTab } from './components/ExplainTab'
 import { AutonomyDial } from './components/AutonomyDial'
-import { CrawlTab } from './components/CrawlTab'
 import './index.css'
 
 interface Progress {
@@ -33,15 +31,13 @@ const DOC_TYPES = [
   { value: 'meeting', label: '회의록 (한국어)' },
   { value: 'en_news', label: 'News (English)' },
 ]
-type TabId = 'approval' | 'playground' | 'critique' | 'debate' | 'explain' | 'crawl' | 'dashboard'
+type TabId = 'approval' | 'playground' | 'agentlab' | 'explain' | 'dashboard'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'approval',   label: '승인 게이트' },
   { id: 'playground', label: 'Playground' },
-  { id: 'critique',   label: '멀티 에이전트' },
-  { id: 'debate',     label: '에이전트 토론' },
+  { id: 'agentlab',   label: '에이전트 실험' },
   { id: 'explain',    label: '출처 분석' },
-  { id: 'crawl',      label: 'URL 크롤링' },
   { id: 'dashboard',  label: '대시보드' },
 ]
 
@@ -167,10 +163,8 @@ export default function App() {
         )}
 
         {activeTab === 'playground' && <PlaygroundTab />}
-        {activeTab === 'critique'   && <CritiqueTab />}
-        {activeTab === 'debate'     && <DebateTab />}
+        {activeTab === 'agentlab'   && <AgentLabTab />}
         {activeTab === 'explain'    && <ExplainTab />}
-        {activeTab === 'crawl'      && <CrawlTab />}
         {activeTab === 'dashboard'  && <DashboardTab />}
       </main>
 
