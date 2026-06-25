@@ -1,3 +1,13 @@
+---
+title: Eval Driven Summarizer
+emoji: 🤖
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # eval-driven-summarizer
 
 ![Eval CI](https://github.com/UnderCruzer/eval-driven-summarizer/actions/workflows/eval.yml/badge.svg)
@@ -124,20 +134,11 @@ cd ui && npm install && npm run dev
 
 ---
 
-## 배포 (Railway)
+## 배포 (Hugging Face Spaces)
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com)
+**라이브 데모:** https://huggingface.co/spaces/UnderCruzer/eval-driven-summarizer
 
-```bash
-# Railway CLI로 배포
-npm install -g @railway/cli
-railway login
-railway init
-railway up
-
-# 환경변수 설정
-railway variables set GEMINI_API_KEY=your_key_here
-```
+Docker 기반으로 배포되며, `GEMINI_API_KEY`를 Space Secrets에 설정하면 됩니다.
 
 ---
 
