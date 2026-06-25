@@ -1,13 +1,3 @@
----
-title: Eval Driven Summarizer
-emoji: 🤖
-colorFrom: blue
-colorTo: purple
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # eval-driven-summarizer
 
 ![Eval CI](https://github.com/UnderCruzer/eval-driven-summarizer/actions/workflows/eval.yml/badge.svg)
