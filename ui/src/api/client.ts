@@ -172,6 +172,49 @@ export async function runDebate(payload: {
   return res.json()
 }
 
+export async function evalSingle(payload: {
+  version: string
+  doc_type: string
+  content: string
+  key_points: string[]
+}): Promise<{
+  summary: string
+  prompt_version: string
+  scores: {
+    key_point_coverage: number
+    faithfulness: number
+    information_loss: number
+    length_adequacy: number
+    total_score: number
+    grade: string
+    reasoning: Record<string, string>
+  }
+  proposal: {
+    id: number
+    base_version: string
+    new_version: string
+    new_system_prompt: string
+    new_user_template: string
+    rationale: string
+    avg_score: number
+    weak_metric: string
+    patterns: { category: string; description: string; frequency: number; improvement_hint: string }[]
+    status: 'pending' | 'approved' | 'rejected'
+    auto_approved: boolean
+  } | null
+}> {
+  const res = await fetch(`${BASE}/eval/single`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.detail ?? '실행 실패')
+  }
+  return res.json()
+}
+
 export async function crawlUrl(url: string): Promise<{ title: string; content: string }> {
   const res = await fetch(`${BASE}/crawl?url=${encodeURIComponent(url)}`)
   if (!res.ok) {

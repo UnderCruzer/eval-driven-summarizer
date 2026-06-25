@@ -114,6 +114,13 @@ class CrawlRunRequest(BaseModel):
     key_points: list[str] = []
 
 
+class SingleEvalRequest(BaseModel):
+    version: str = "v1"
+    doc_type: str = "news"
+    content: str
+    key_points: list[str] = []
+
+
 # ── 엔드포인트 ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -420,6 +427,130 @@ async def playground_debate(req: DebateRequest):
             "b_weaknesses": verdict.b_weaknesses,
             "final_verdict": verdict.final_verdict,
         },
+    }
+
+
+@app.post("/eval/single")
+async def eval_single(req: SingleEvalRequest):
+    """단일 문서 전체 파이프라인: 요약 → 평가 → 개선 제안 (샘플 데이터 불필요)."""
+    import uuid, sqlite3
+    from pathlib import Path as P
+    from agent.summarizer import SummarizerAgent
+    from eval.judge import JudgeAgent
+    from eval.analyzer import FailureAnalyzer, AnalysisReport, FailurePattern
+    from pipeline.improver import PromptImprover
+
+    loop = asyncio.get_event_loop()
+
+    # 1. 요약
+    summarizer = SummarizerAgent(prompt_version=req.version)
+    output = await loop.run_in_executor(
+        None, lambda: summarizer.summarize("single", req.doc_type, req.content)
+    )
+
+    # 2. 평가
+    judge = JudgeAgent()
+    result = await loop.run_in_executor(
+        None,
+        lambda: judge.evaluate(
+            doc_id="single",
+            doc_type=req.doc_type,
+            content=req.content,
+            summary=output.summary,
+            prompt_version=req.version,
+            key_points=req.key_points,
+            reference_summary="",
+        ),
+    )
+
+    scores = {
+        "key_point_coverage": result.key_point_coverage.score,
+        "faithfulness":       result.faithfulness.score,
+        "information_loss":   result.information_loss.score,
+        "length_adequacy":    result.length_adequacy.score,
+        "total_score":        result.total_score,
+        "grade":              result.grade,
+        "reasoning": {
+            "key_point_coverage": result.key_point_coverage.reasoning,
+            "faithfulness":       result.faithfulness.reasoning,
+            "information_loss":   result.information_loss.reasoning,
+            "length_adequacy":    result.length_adequacy.reasoning,
+        },
+    }
+
+    # 3. 점수가 낮으면 개선 제안 생성
+    proposal_data = None
+    if result.total_score < 4.0:
+        metric_avgs = {
+            "key_point_coverage": result.key_point_coverage.score,
+            "faithfulness":       result.faithfulness.score,
+            "information_loss":   result.information_loss.score,
+            "length_adequacy":    result.length_adequacy.score,
+        }
+        weak_metric = min(metric_avgs, key=metric_avgs.get)
+
+        report = AnalysisReport(
+            run_id="single",
+            prompt_version=req.version,
+            total_docs=1,
+            avg_score=result.total_score,
+            weak_metric=weak_metric,
+            patterns=[
+                FailurePattern(
+                    category=weak_metric,
+                    frequency=1,
+                    affected_doc_ids=["single"],
+                    description=scores["reasoning"][weak_metric],
+                    improvement_hint=scores["reasoning"][weak_metric],
+                )
+            ],
+            overall_suggestion=scores["reasoning"][weak_metric],
+        )
+
+        improver = PromptImprover()
+        proposal = await loop.run_in_executor(None, lambda: improver.propose(report))
+
+        patterns = [{"category": p.category, "description": p.description,
+                     "frequency": p.frequency, "improvement_hint": p.improvement_hint}
+                    for p in report.patterns]
+
+        proposal_id = save_proposal(
+            base_version=proposal.base_version,
+            new_version=proposal.new_version,
+            new_system_prompt=proposal.new_system_prompt,
+            new_user_template=proposal.new_user_template,
+            rationale=proposal.rationale,
+            avg_score=result.total_score,
+            weak_metric=weak_metric,
+            patterns=patterns,
+        )
+
+        # Autonomy Dial — 자동 승인
+        auto_approved = False
+        if _autonomy["enabled"] and result.total_score >= _autonomy["threshold"]:
+            _write_to_prompts(proposal)
+            update_proposal_status(proposal_id, "approved")
+            auto_approved = True
+
+        proposal_data = {
+            "id": proposal_id,
+            "base_version": proposal.base_version,
+            "new_version": proposal.new_version,
+            "new_system_prompt": proposal.new_system_prompt,
+            "new_user_template": proposal.new_user_template,
+            "rationale": proposal.rationale,
+            "avg_score": result.total_score,
+            "weak_metric": weak_metric,
+            "patterns": patterns,
+            "status": "approved" if auto_approved else "pending",
+            "auto_approved": auto_approved,
+        }
+
+    return {
+        "summary": output.summary,
+        "prompt_version": output.prompt_version,
+        "scores": scores,
+        "proposal": proposal_data,
     }
 
 
