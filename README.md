@@ -2,18 +2,39 @@
 
 ![Eval CI](https://github.com/UnderCruzer/eval-driven-summarizer/actions/workflows/eval.yml/badge.svg)
 
-**문서 요약 에이전트를 평가하고 자동으로 개선하는 시스템**
+**LLM-as-a-Judge 기반 문서 요약 에이전트 — 평가·개선·승인 루프 + AX 패턴 시연**
+
+> AX(Agent Experience) 포트폴리오 프로젝트.  
+> 에이전트가 요약을 평가하고 스스로 프롬프트를 개선하며, 사람이 최종 승인하는 Human-in-the-Loop 파이프라인입니다.
+
+---
+
+## 핵심 기능
+
+| 기능 | 설명 |
+|------|------|
+| **LLM-as-a-Judge** | 4가지 지표로 요약 품질 자동 평가 |
+| **Prompt Auto-Improvement** | 실패 패턴 분석 → 프롬프트 개선안 자동 생성 |
+| **Human Approval Gate** | 에이전트 제안을 사람이 검토 후 승인/거절 |
+| **Confidence Signal + Autonomy Dial** | 신뢰도 임계값 이상이면 에이전트가 자동 승인 |
+| **멀티 에이전트 크리틱** | Summarizer A → Critic → Summarizer B 파이프라인 |
+| **에이전트 토론** | 간결 전략 vs 포괄 전략 → Judge 최적안 선정 |
+| **출처 분석 (Explainability)** | 요약 문장별 원문 출처 하이라이트 |
+| **URL 크롤링** | URL 입력 → 기사 자동 크롤링 → 즉석 요약·평가 |
+| **실시간 SSE 스트리밍** | Eval 진행 상황 서버→브라우저 실시간 전송 |
+
+---
+
+## AX 패턴
 
 ```
-문서 입력
-  → Summarizer Agent  (요약 생성)
-  → Judge Agent       (품질 평가 — LLM-as-a-Judge)
-  → Failure Analyzer  (실패 패턴 분류)
-  → Prompt Improver   (프롬프트 자동 개선 제안)
-  → Human Approval    (개선안 승인 게이트)
-  → Regression Check  (버전 간 회귀 감지)
-  → 반복
+Confidence Signal   — avg_score 표시로 에이전트 자신감 가시화
+Autonomy Dial       — 임계값 슬라이더로 자동화 수준 조절
+Explainable Rationale — 지표별 판단 근거 상세 표시
+Intent Preview      — 승인 전 새 프롬프트 적용 결과 미리보기 (WIP)
 ```
+
+---
 
 ## 평가 지표
 
@@ -24,105 +45,103 @@
 | information_loss | 25% | 중요한 정보를 얼마나 보존했는가 |
 | length_adequacy | 10% | 길이가 적절한가 (150~350자 기준) |
 
-총점은 가중 평균으로 산출되며 A(4.0+) / B(3.0+) / C(2.0+) / F로 등급 부여
+총점은 가중 평균으로 산출되며 **A(4.0+) / B(3.0+) / C(2.0+) / F**로 등급 부여
+
+---
+
+## 파이프라인
+
+```
+문서 입력
+  → Summarizer Agent  (요약 생성)
+  → Judge Agent       (LLM-as-a-Judge 평가)
+  → Failure Analyzer  (실패 패턴 분류)
+  → Prompt Improver   (프롬프트 자동 개선 제안)
+  → Human Approval    (승인 게이트 — Autonomy Dial로 자동화 가능)
+  → 반복
+```
+
+---
 
 ## 프로젝트 구조
 
 ```
 agent/
-  summarizer.py     # Claude API 기반 요약 에이전트
-  prompts.py        # 프롬프트 버전 관리 (v1, v2, ...)
+  summarizer.py     # 요약 에이전트
+  critic.py         # 크리틱 에이전트 (멀티 에이전트 크리틱)
+  debate.py         # 토론 에이전트 (전략 A vs B)
+  explainer.py      # 출처 분석 에이전트
+  crawler.py        # URL 크롤러 (BeautifulSoup)
+  llm.py            # Gemini API 중앙 래퍼
+  prompts.py        # 프롬프트 버전 관리
 eval/
-  metrics.py        # 평가 지표 정의 및 스키마
-  judge.py          # LLM-as-a-Judge 평가 에이전트
-  analyzer.py       # 실패 패턴 분류 및 개선 힌트 생성
+  judge.py          # LLM-as-a-Judge
+  analyzer.py       # 실패 패턴 분류
 pipeline/
   runner.py         # 비동기 배치 평가 파이프라인
-  loop.py           # 평가→분석→개선→승인 전체 루프
-  improver.py       # 프롬프트 자동 개선 + Human Approval Gate
-  regression.py     # 버전 간 회귀 감지
+  improver.py       # 프롬프트 개선 + Human Approval Gate
   tracer.py         # 단계별 트레이스 수집
-  trace_viewer.py   # CLI 트레이스 드릴다운 뷰어
-  ci_check.py       # CI 전용 회귀 체크 (exit code)
 app/
-  main.py           # FastAPI 서버 (Eval API + 대시보드 API + UI 서빙)
+  main.py           # FastAPI (Eval API + 대시보드 API + React UI 서빙)
   database.py       # 제안 저장/조회 (SQLite)
-ui/
-  src/              # React + TypeScript (Vite)
-  ├─ components/    # StatusBadge, ProposalCard, DiffView, 대시보드 탭
-  ├─ hooks/         # useSSE (EventSource 커스텀 훅)
-  ├─ api/           # fetch 래퍼
-  └─ types/         # API 응답 타입 정의
+ui/src/
+  components/       # React 컴포넌트
+  ├─ PlaygroundTab  # 텍스트 입력 / URL 크롤링 즉석 요약
+  ├─ AgentLabTab    # 멀티 에이전트 크리틱 + 에이전트 토론
+  ├─ ExplainTab     # 출처 분석 (문장↔원문 하이라이트)
+  ├─ AutonomyDial   # Autonomy Dial (자동 승인 임계값)
+  └─ dashboard/     # 버전 비교 / 실패 케이스 / 트레이스
 data/
-  documents/        # 테스트 문서 (뉴스, 논문, 회의록)
+  documents/        # 테스트 문서 (뉴스·논문·회의록)
   ground_truth/     # 핵심 포인트 + 참조 요약
-  loader.py         # TestCase 스키마 및 로더
 ```
 
-## 개선 루프 실행 결과
+---
 
-실제로 `python -m pipeline.loop` 를 v1부터 순차 실행한 결과입니다.
-
-| 버전 | 평균 점수 | coverage | faithfulness | info_loss | length | 주요 변경 |
-|------|-----------|----------|--------------|-----------|--------|-----------|
-| v1 | 4.93 / 5.0 | 5.0 | 5.0 | 5.0 | 4.17 | 기본 프롬프트 |
-| v2 | 4.98 / 5.0 | 5.0 | 5.0 | 5.0 | 4.83 | 원문 길이 구간별 기준 추가 (500자 미만 / 500~2000자 / 2000자 이상) |
-| v3 | 4.97 / 5.0 | 5.0 | 5.0 | 5.0 | 4.83 | 요약 작성 후 길이 자체 검토 단계 추가 |
-
-**개선 포인트:** Judge Agent가 매 버전마다 `length_adequacy` 를 취약 지표로 식별 →
-Prompt Improver가 길이 기준을 점진적으로 구체화 → v1(4.93) → v2(4.98)로 향상
-
-> 모든 문서(뉴스 2건, 논문 2건, 회의록 2건)에서 v2 기준 전 항목 A등급 달성
-
-### v1
-
-![v1 결과](docs/images/loop_v1.png)
-
-### v2
-
-![v2 결과](docs/images/loop_v2.png)
-
-### v3
-
-![v3 결과](docs/images/loop_v3.png)
-
-## 시작하기
+## 로컬 실행
 
 ```bash
 git clone https://github.com/UnderCruzer/eval-driven-summarizer
 cd eval-driven-summarizer
 
+# 환경변수 설정
 cp .env.example .env
-# .env에 ANTHROPIC_API_KEY 입력
+# .env에 GEMINI_API_KEY 입력
 
+# 의존성 설치
 pip install -e ".[dev]"
-```
 
-## 실행 방법
-
-```bash
-# 1. 웹 UI (Human Approval Gate + 대시보드 통합)
+# 서버 실행
 uvicorn app.main:app --reload
 # → http://localhost:8000
-
-# 개발 시 (React HMR)
-cd ui && npm run dev
-# → http://localhost:5173 (FastAPI 프록시 포함)
-
-# 2. CLI — 단순 평가 실행
-python -m pipeline.run --version v1
-
-# 3. CLI — 전체 개선 루프 (평가 → 분석 → 개선 제안 → 승인)
-python -m pipeline.loop --version v1
-
-# 4. 버전 간 회귀 비교
-python -c "from pipeline.regression import RegressionTracker; RegressionTracker().compare('v1', 'v2')"
-
-# 5. 트레이스 CLI 드릴다운
-python -m pipeline.trace_viewer
 ```
+
+개발 시 React HMR 사용:
+```bash
+cd ui && npm install && npm run dev
+# → http://localhost:5173
+```
+
+---
+
+## 배포 (Railway)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com)
+
+```bash
+# Railway CLI로 배포
+npm install -g @railway/cli
+railway login
+railway init
+railway up
+
+# 환경변수 설정
+railway variables set GEMINI_API_KEY=your_key_here
+```
+
+---
 
 ## CI
 
-PR 생성 시 `agent/`, `eval/`, `pipeline/`, `data/` 변경 감지 → 자동 Eval 실행
-→ 이전 버전 대비 회귀 발생 시 머지 블락, 결과 Step Summary에 자동 기록
+PR 생성 시 `agent/`, `eval/`, `pipeline/`, `data/` 변경 감지 → 자동 Eval 실행  
+→ 이전 버전 대비 회귀 발생 시 결과를 Step Summary에 자동 기록
