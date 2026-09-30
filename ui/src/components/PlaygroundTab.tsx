@@ -69,6 +69,9 @@ export function PlaygroundTab() {
   const [showContent, setShowContent] = useState(false)
   const [deciding, setDeciding] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const [editingPrompt, setEditingPrompt] = useState(false)
+  const [editedSystem, setEditedSystem] = useState('')
+  const [editedTemplate, setEditedTemplate] = useState('')
 
   function showToast(msg: string, type: 'success' | 'error') {
     setToast({ msg, type })
@@ -115,14 +118,26 @@ export function PlaygroundTab() {
     if (!result?.proposal) return
     setDeciding(true)
     try {
-      await approveProposal(result.proposal.id)
+      await approveProposal(
+        result.proposal.id,
+        editingPrompt ? editedSystem : undefined,
+        editingPrompt ? editedTemplate : undefined,
+      )
       setResult((r) => r && r.proposal ? { ...r, proposal: { ...r.proposal, status: 'approved' } } : r)
+      setEditingPrompt(false)
       showToast(`${result.proposal.new_version} 승인 완료`, 'success')
     } catch (e) {
       showToast((e as Error).message, 'error')
     } finally {
       setDeciding(false)
     }
+  }
+
+  function handleStartEdit() {
+    if (!result?.proposal) return
+    setEditedSystem(result.proposal.new_system_prompt)
+    setEditedTemplate(result.proposal.new_user_template)
+    setEditingPrompt(true)
   }
 
   async function handleReject() {
@@ -304,17 +319,73 @@ export function PlaygroundTab() {
                 취약 지표: <strong>{result.proposal.weak_metric}</strong>
               </div>
 
+              {/* 프롬프트 편집기 */}
               {result.proposal.status === 'pending' && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn-primary" disabled={deciding} onClick={handleApprove}
-                    style={{ background: 'var(--green)' }}>
-                    ✓ 승인
-                  </button>
-                  <button className="btn-primary" disabled={deciding} onClick={handleReject}
-                    style={{ background: 'var(--red)' }}>
-                    ✗ 거절
-                  </button>
-                </div>
+                <>
+                  {!editingPrompt ? (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>제안된 프롬프트</div>
+                      <div style={{ background: 'var(--bg)', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, whiteSpace: 'pre-wrap', maxHeight: 120, overflowY: 'auto' }}>
+                        {result.proposal.new_system_prompt}
+                      </div>
+                      <button
+                        onClick={handleStartEdit}
+                        style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        ✏️ 직접 수정하기
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginBottom: 8 }}>프롬프트 편집 중</div>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>System Prompt</label>
+                        <textarea
+                          value={editedSystem}
+                          onChange={(e) => setEditedSystem(e.target.value)}
+                          rows={6}
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            background: 'var(--bg)', border: '1px solid var(--accent)',
+                            borderRadius: 6, color: 'var(--text)', fontSize: 12,
+                            padding: '8px 10px', resize: 'vertical', fontFamily: 'monospace',
+                          }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>User Template</label>
+                        <textarea
+                          value={editedTemplate}
+                          onChange={(e) => setEditedTemplate(e.target.value)}
+                          rows={4}
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            background: 'var(--bg)', border: '1px solid var(--accent)',
+                            borderRadius: 6, color: 'var(--text)', fontSize: 12,
+                            padding: '8px 10px', resize: 'vertical', fontFamily: 'monospace',
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => setEditingPrompt(false)}
+                        style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        ↩ 원래 제안으로 되돌리기
+                      </button>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-primary" disabled={deciding} onClick={handleApprove}
+                      style={{ background: 'var(--green)' }}>
+                      {editingPrompt ? '✓ 수정 후 승인' : '✓ 승인'}
+                    </button>
+                    <button className="btn-primary" disabled={deciding} onClick={handleReject}
+                      style={{ background: 'var(--red)' }}>
+                      ✗ 거절
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           )}
